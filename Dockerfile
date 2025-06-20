@@ -49,8 +49,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender-dev \
     libmagic1 \
-    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure sqlite3 is available
+RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user for security
 RUN useradd -m -u 1000 appuser
@@ -61,6 +63,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy project files
 COPY . .
+
+# Create instance directory in container
+RUN mkdir -p /app/db && chown -R 1000:1000 /app/db
 
 # Set permissions for entrypoint script
 RUN chmod +x /app/entrypoint.sh

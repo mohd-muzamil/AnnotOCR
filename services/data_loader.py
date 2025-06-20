@@ -6,7 +6,7 @@
 
 import os
 from extensions import db
-from models import Study, Participant, Image
+from models import Studies, Participants, Images
 
 def load_images_from_static():
     image_root = os.path.join('static', 'images')
@@ -17,9 +17,9 @@ def load_images_from_static():
             continue
 
         # Get or create study
-        study = Study.query.filter_by(name=study_name).first()
+        study = Studies.query.filter_by(name=study_name).first()
         if not study:
-            study = Study(name=study_name)
+            study = Studies(name=study_name)
             db.session.add(study)
             try:
                 db.session.commit()
@@ -35,14 +35,14 @@ def load_images_from_static():
                 continue
 
             try:
-                participant = Participant.query.filter_by(
-                    identifier=participant_id, 
+                participant = Participants.query.filter_by(
+                    name=participant_id, 
                     study_id=study.id
                 ).first()
                 
                 if not participant:
-                    participant = Participant(
-                        identifier=participant_id, 
+                    participant = Participants(
+                        name=participant_id, 
                         study_id=study.id
                     )
                     db.session.add(participant)
@@ -60,13 +60,13 @@ def load_images_from_static():
                 relative_path = os.path.join('images', study_name, participant_id, filename)
                 
                 try:
-                    existing = Image.query.filter_by(
+                    existing = Images.query.filter_by(
                         filename=filename,
                         participant_id=participant.id
                     ).first()
                     
                     if not existing:
-                        image = Image(
+                        image = Images(
                             filename=filename,
                             filepath=relative_path,
                             participant_id=participant.id,

@@ -1,7 +1,7 @@
 # routes/study.py
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required
-from models import Study, Participant
+from models import Studies, Participants
 from extensions import db
 
 study_bp = Blueprint('study', __name__, url_prefix='/study')

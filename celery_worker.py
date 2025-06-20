@@ -1,6 +1,6 @@
 from app import create_app
 from celery import Celery
-from services.ocr_service import OCRService
+from services.ocr_image_extractor import extract_ocr_for_images
 
 def make_celery(app):
     celery = Celery(
@@ -24,4 +24,4 @@ celery = make_celery(app)
 
 @celery.task
 def process_image_task(image_id):
-    return OCRService.process_image(image_id)
+    return extract_ocr_for_images([image_id])

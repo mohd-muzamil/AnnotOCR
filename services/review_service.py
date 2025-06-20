@@ -4,7 +4,7 @@
 # and to submit corrections for reviewed images, updating their status based on reviewer actions (approve or reject).
 # This service is essential for the quality control and validation of OCR data within the application.
 
-from models import Image, Correction
+from models import Images, Corrections
 from extensions import db
 
 class ReviewService:

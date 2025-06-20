@@ -16,12 +16,9 @@ services:
       - "5000:5000"
     volumes:
       - .:/app
-      - dbdata:/app/db
-    environment:
-      - FLASK_ENV=production
-      - DATABASE_URL=sqlite:////app/db/db.sqlite3
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - sqlite_data:/app/db
+    env_file:
+      - .env
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
@@ -36,12 +33,10 @@ services:
       - web
     volumes:
       - .:/app
-      - dbdata:/app/db
-    environment:
-      - DATABASE_URL=sqlite:////app/db/db.sqlite3
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - sqlite_data:/app/db
+    env_file:
+      - .env
     command: celery -A celery_worker.celery worker --loglevel=info
 
 volumes:
-  dbdata:
+  sqlite_data:

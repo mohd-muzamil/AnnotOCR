@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# No database readiness check needed for SQLite3
+
 # Apply database migrations
 flask db upgrade
 
@@ -12,8 +14,8 @@ EOF
 
 # Run OCR image extraction on initial build
 flask shell <<EOF
-from services.ocr_image_extractor import extract_ocr_for_images
-extract_ocr_for_images()
+from services.ocr_image_extractor import generate_ocr_for_all_images
+generate_ocr_for_all_images()
 exit()
 EOF
 
