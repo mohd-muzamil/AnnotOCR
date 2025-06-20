@@ -1,0 +1,166 @@
+/* Top Navigation Bar Styles */
+.top-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 1000;
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+}
+
+/* Studies Navigation Bar */
+.studies-navbar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background-color: #343a40;
+    z-index: 999;
+    padding: 0.25rem 1rem;
+}
+
+/* Main Content Container */
+.main-content-container {
+    margin-top: 96px; /* Height of both navbars */
+    min-height: calc(100vh - 96px);
+    padding: 20px;
+    transition: all 0.3s;
+}
+
+/* Login page specific */
+.login-page .main-content-container {
+    margin-top: 0;
+    min-height: 100vh;
+}
+
+/* Navigation Items */
+.navbar-brand {
+    font-weight: 600;
+}
+
+.navbar-dark .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+    color: white;
+}
+
+/* Dropdown Styles */
+.dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Breadcrumbs */
+.breadcrumb {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0;
+    background-color: transparent;
+}
+
+/* Review Page Specific */
+.image-container {
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 80vh;
+    max-height: 750px;
+}
+
+.cursor-zoom {
+    cursor: zoom-in;
+    transition: transform 0.2s;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.cursor-zoom:hover {
+    transform: scale(1.02);
+}
+
+/* Modal Styles */
+#expandedImage {
+    max-width: 95vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    margin: 0 auto;
+    display: block;
+}
+
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+.modal-content {
+    background-color: transparent;
+    border: none;
+}
+
+/* Text Styles */
+.ocr-text {
+    font-family: monospace;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    overflow-y: auto;
+    max-height: 65vh;
+}
+
+/* Table Styles */
+.table tbody tr td {
+    vertical-align: middle;
+}
+
+/* Status Colors */
+.status-pending { color: #6c757d; }
+.status-approved { color: #198754; }
+.status-rejected { color: #dc3545; }
+
+/* Form Elements */
+textarea.form-control {
+    min-height: 65vh;
+    resize: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .main-content-container {
+        margin-top: 136px; /* Adjusted for stacked navbars */
+        padding: 15px;
+    }
+    
+    .image-container {
+        height: 40vh;
+    }
+    
+    .ocr-text, textarea.form-control {
+        max-height: 30vh;
+        min-height: 30vh;
+    }
+    
+    .navbar-brand span {
+        display: none;
+    }
+    
+    .breadcrumb {
+        font-size: 0.8rem;
+        padding: 0.5rem;
+    }
+}
+
+/* Utility Classes */
+.full-width {
+    width: 100%;
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease-in-out;
+}

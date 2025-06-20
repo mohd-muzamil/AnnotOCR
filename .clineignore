@@ -1,0 +1,2 @@
+# Ignore static/images directory to prevent sharing with Cline or X
+static/images/

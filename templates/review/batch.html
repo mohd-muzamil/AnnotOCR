@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Review - {{ participant.identifier }}{% endblock %}
+
+{% block breadcrumbs %}
+    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.study', study_id=study.id) }}">{{ study.name }}</a></li>
+    <li class="breadcrumb-item active">{{ participant.identifier }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            Review: {{ participant.identifier }}
+            <span class="badge bg-{{ 'success' if ((approved_count + (rejected_count if rejected_count is defined else 0)) / image_count * 100) == 100 else 'warning' }}">
+                {{ (((approved_count + (rejected_count if rejected_count is defined else 0)) / image_count * 100) | round(1)) if image_count > 0 else 0 }}% Complete
+            </span>
+        </h1>
+        <div>
+            <span class="me-2">Total: {{ image_count }}</span>
+            <span class="me-2">{{ approved_count }} Approved</span>
+            <span class="me-2">{{ rejected_count if rejected_count is defined else 0 }} Rejected</span>
+            <span class="me-2">{{ pending_count if pending_count is defined else 0 }} Pending</span>
+            <!-- Debug: approved_count={{ approved_count }}, rejected_count={{ rejected_count if rejected_count is defined else 0 }}, image_count={{ image_count }} -->
+            <div class="progress" style="width: 200px; height: 10px; display: inline-block;">
+                <div class="progress-bar bg-success" 
+                     style="width: {{ ((approved_count + (rejected_count if rejected_count is defined else 0)) / image_count * 100) if image_count is defined and image_count > 0 else 0 }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for image in images %}
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="row g-0">
+                    <!-- Image Column (40%) -->
+                    <div class="col-md-4">
+                        <div class="image-container p-2" style="height: 80vh; max-height: 750px;">
+                            <img src="{{ url_for('static', filename=image.filepath) }}" 
+                                 class="img-fluid h-100 w-auto cursor-zoom" 
+                                 style="object-fit: contain; max-width: 100%;"
+                                 onclick="expandImage(this)">
+                        </div>
+                    </div>
+                    
+                    <!-- Text Columns (60%) -->
+                    <div class="col-md-8">
+                        <div class="row h-100">
+                            <!-- OCR Text Column (50% of right side) -->
+                            <div class="col-md-6 border-end">
+                                <div class="p-2 h-100 d-flex flex-column">
+                                    <h6 class="text-muted mb-2">Original OCR</h6>
+                                    <div class="ocr-text flex-grow-1 bg-light p-2 overflow-auto" style="max-height: 65vh;">
+                                        {{ image.ocr_text if image.ocr_text else 'No OCR results' }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Corrected Text Column (50% of right side) -->
+                            <div class="col-md-6 {% if image.status == 'approved' %}border-success{% elif image.status == 'rejected' %}border-danger{% else %}border-secondary{% endif %}">
+                                <div class="p-2 h-100 d-flex flex-column">
+                                    <h6 class="text-muted mb-2">Your Correction</h6>
+                                    <textarea class="form-control flex-grow-1 mb-2" 
+                                              placeholder="Enter correction..."
+                                              style="min-height: 65vh; resize: none;">{{ image.corrected_text if image.corrected_text else image.ocr_text if image.ocr_text else '' }}</textarea>
+                                              
+                                    <!-- Status Buttons -->
+                                    <div class="btn-group w-100 mb-2">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-secondary {% if image.status == 'pending' %}active{% endif %}" 
+                                                data-status="pending"
+                                                data-image-id="{{ image.id }}"
+                                                data-ocr-result-id="{{ image.ocr_result_id }}">
+                                            Pending
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-success {% if image.status == 'approved' %}active{% endif %}" 
+                                                data-status="approved"
+                                                data-image-id="{{ image.id }}"
+                                                data-ocr-result-id="{{ image.ocr_result_id }}">
+                                            Approve
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger {% if image.status == 'rejected' %}active{% endif %}" 
+                                                data-status="rejected"
+                                                data-image-id="{{ image.id }}"
+                                                data-ocr-result-id="{{ image.ocr_result_id }}">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark">
+            <div class="modal-header border-0">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body d-flex justify-content-center align-items-center p-0">
+                <img id="expandedImage" class="img-fluid" style="object-fit: contain; max-height: 90vh; max-width: 95vw;">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-container {
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+    }
+    
+    .ocr-text {
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 0.9rem;
+        overflow-y: auto;
+    }
+    
+    .cursor-zoom {
+        cursor: zoom-in;
+        transition: transform 0.2s;
+    }
+    
+    .cursor-zoom:hover {
+        transform: scale(1.02);
+    }
+    
+    @media (max-width: 768px) {
+        .image-container {
+            height: 40vh;
+        }
+        .ocr-text, textarea {
+            max-height: 30vh !important;
+            min-height: 30vh !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{{ url_for('static', filename='js/autocomplete_suggestions.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Log jQuery status for debugging
+    console.log("jQuery version:", typeof $ !== 'undefined' ? $.fn.jquery : "jQuery not loaded");
+    
+    // Initialize modal once
+    const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+    const expandedImg = document.getElementById('expandedImage');
+    
+    // Custom Autocomplete for "Your Correction" textareas
+    console.log("Initializing custom autocomplete with suggestions:", appSuggestions);
+    document.querySelectorAll("textarea.form-control").forEach(function(textarea) {
+        console.log("Applying autocomplete to textarea:", textarea);
+        
+        // Create a wrapper div for positioning the suggestion list
+        const wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        textarea.parentNode.insertBefore(wrapper, textarea);
+        wrapper.appendChild(textarea);
+        
+        // Create suggestion list element unique to this textarea
+        const suggestionList = document.createElement('ul');
+        suggestionList.className = 'suggestion-list-' + Math.random().toString(36).substr(2, 9); // Unique class for identification
+        suggestionList.style.position = 'absolute';
+        suggestionList.style.background = 'white';
+        suggestionList.style.border = '1px solid #ccc';
+        suggestionList.style.listStyle = 'none';
+        suggestionList.style.padding = '0';
+        suggestionList.style.margin = '2px 0 0 0';
+        suggestionList.style.maxHeight = '200px';
+        suggestionList.style.overflowY = 'auto';
+        suggestionList.style.zIndex = '1000';
+        suggestionList.style.display = 'none';
+        suggestionList.style.width = textarea.offsetWidth + 'px';
+        wrapper.appendChild(suggestionList);
+        
+        // Function to update suggestions for this textarea
+        function updateSuggestions(value) {
+            suggestionList.innerHTML = '';
+            if (value.length < 2) {
+                suggestionList.style.display = 'none';
+                return;
+            }
+            
+            const matches = appSuggestions.filter(function(suggestion) {
+                return suggestion.toLowerCase().includes(value.toLowerCase());
+            });
+            
+            if (matches.length > 0) {
+                matches.forEach(function(match, index) {
+                    const li = document.createElement('li');
+                    li.textContent = match;
+                    li.style.padding = '5px 10px';
+                    li.style.cursor = 'pointer';
+                    li.style.backgroundColor = index === 0 ? '#f0f0f0' : 'white';
+                    li.addEventListener('mouseover', function() {
+                        suggestionList.querySelectorAll('li').forEach(item => item.style.backgroundColor = 'white');
+                        li.style.backgroundColor = '#f0f0f0';
+                    });
+                    li.addEventListener('mouseout', function() {
+                        li.style.backgroundColor = index === 0 && !suggestionList.dataset.selectedIndex ? '#f0f0f0' : 'white';
+                    });
+                    li.addEventListener('click', function() {
+                        // Get current text and cursor position
+                        const cursorPosition = textarea.selectionStart;
+                        const value = textarea.value;
+                        const textBeforeCursor = value.substring(0, cursorPosition);
+                        const textAfterCursor = value.substring(cursorPosition);
+                        // Get the current line start
+                        const lastNewlineIndex = textBeforeCursor.lastIndexOf('\n');
+                        const currentLineStart = lastNewlineIndex === -1 ? 0 : lastNewlineIndex + 1;
+                        // Replace only the current line's content before cursor with suggestion
+                        const newValue = value.substring(0, currentLineStart) + match + textAfterCursor;
+                        textarea.value = newValue;
+                        // Adjust cursor position to end of suggestion
+                        textarea.selectionStart = textarea.selectionEnd = currentLineStart + match.length;
+                        suggestionList.style.display = 'none';
+                        console.log("Suggestion selected:", match);
+                    });
+                    suggestionList.appendChild(li);
+                });
+                suggestionList.style.display = 'block';
+                suggestionList.dataset.selectedIndex = '0';
+            } else {
+                suggestionList.style.display = 'none';
+            }
+        }
+        
+        // Handle input for suggestions, focusing on current line or last few characters
+        textarea.addEventListener('input', function() {
+            const value = this.value;
+            // Get the text before the cursor
+            const cursorPosition = this.selectionStart;
+            const textBeforeCursor = value.substring(0, cursorPosition);
+            // Extract the last line for matching
+            const lastLine = textBeforeCursor.split('\n').pop();
+            updateSuggestions(lastLine);
+        });
+        
+        // Handle keydown for navigation and selection
+        textarea.addEventListener('keydown', function(e) {
+            if (e.keyCode === 9) { // Tab key
+                const items = suggestionList.querySelectorAll('li');
+                if (suggestionList.style.display !== 'none' && items.length > 0) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const selectedIndex = parseInt(suggestionList.dataset.selectedIndex || '0', 10);
+                    if (items[selectedIndex]) {
+                        // Get current text and cursor position
+                        const cursorPosition = this.selectionStart;
+                        const value = this.value;
+                        const textBeforeCursor = value.substring(0, cursorPosition);
+                        const textAfterCursor = value.substring(cursorPosition);
+                        // Get the current line start
+                        const lastNewlineIndex = textBeforeCursor.lastIndexOf('\n');
+                        const currentLineStart = lastNewlineIndex === -1 ? 0 : lastNewlineIndex + 1;
+                        // Replace only the current line's content before cursor with suggestion
+                        const suggestionText = items[selectedIndex].textContent;
+                        const newValue = value.substring(0, currentLineStart) + suggestionText + textAfterCursor;
+                        this.value = newValue;
+                        // Adjust cursor position to end of suggestion
+                        this.selectionStart = this.selectionEnd = currentLineStart + suggestionText.length;
+                        suggestionList.style.display = 'none';
+                        console.log("Suggestion selected with Tab:", suggestionText);
+                    }
+                }
+                // Do not prevent default behavior if no suggestions are visible, allowing normal tab navigation
+            } else if (suggestionList.style.display !== 'none') {
+                const items = suggestionList.querySelectorAll('li');
+                if (items.length === 0) return;
+                
+                let selectedIndex = parseInt(suggestionList.dataset.selectedIndex || '0', 10);
+                
+                if (e.keyCode === 38) { // Up arrow
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                    suggestionList.dataset.selectedIndex = selectedIndex;
+                    items.forEach((item, index) => item.style.backgroundColor = index === selectedIndex ? '#f0f0f0' : 'white');
+                } else if (e.keyCode === 40) { // Down arrow
+                    e.preventDefault();
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                    suggestionList.dataset.selectedIndex = selectedIndex;
+                    items.forEach((item, index) => item.style.backgroundColor = index === selectedIndex ? '#f0f0f0' : 'white');
+                } else if (e.keyCode === 27) { // Escape
+                    suggestionList.style.display = 'none';
+                }
+            }
+        });
+        
+        // Auto-save functionality for textarea changes, only when clicking outside
+        textarea.addEventListener('blur', function() {
+            autoSaveTextarea(this);
+        });
+        
+        // Store initial values for change detection
+        textarea.dataset.initialValue = textarea.value;
+        const container = textarea.closest('.col-md-6');
+        const initialStatusButton = container.querySelector('.btn.active');
+        if (initialStatusButton) {
+            initialStatusButton.dataset.initialStatus = initialStatusButton.getAttribute('data-status');
+        }
+        
+        // Function to auto-save textarea content
+        function autoSaveTextarea(textarea) {
+            const container = textarea.closest('.col-md-6');
+            const statusButtons = container.querySelector('.btn-group');
+            const activeButton = statusButtons.querySelector('.btn.active');
+            const imageId = activeButton.getAttribute('data-image-id');
+            const ocrResultId = activeButton.getAttribute('data-ocr-result-id');
+            const status = activeButton.getAttribute('data-status');
+            const initialValue = textarea.dataset.initialValue;
+            const initialStatus = activeButton.dataset.initialStatus || status;
+            
+            // Check if there are actual changes
+            const hasTextChanged = textarea.value !== initialValue;
+            const hasStatusChanged = status !== initialStatus;
+            
+            if (!hasTextChanged && !hasStatusChanged) {
+                console.log("No changes detected for image ID:", imageId);
+                return; // Do not save or show toast if no changes
+            }
+            
+            const data = {
+                image_id: imageId,
+                ocr_result_id: ocrResultId,
+                corrected_text: textarea.value,
+                status: status
+            };
+
+            console.log("Auto-saving textarea content for image ID:", imageId);
+            
+            fetch("{{ url_for('review.batch_submit') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update initial values after successful save
+                    textarea.dataset.initialValue = textarea.value;
+                    activeButton.dataset.initialStatus = status;
+                    const toast = new bootstrap.Toast(document.getElementById('saveToast'));
+                    toast.show();
+                } else {
+                    console.error('Auto-save error:', data.error || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                console.error('Auto-save error:', error);
+            });
+        }
+        
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!wrapper.contains(e.target)) {
+                suggestionList.style.display = 'none';
+            }
+        });
+    });
+    
+    // Improved expandImage function
+    function expandImage(img) {
+        // Reset image first to handle same-image clicks
+        expandedImg.src = '';
+        expandedImg.src = img.src;
+        expandedImg.alt = img.alt || 'Expanded document view';
+        
+        // Calculate best display size when image loads
+        expandedImg.onload = function() {
+            const windowHeight = window.innerHeight * 0.9;
+            const windowWidth = window.innerWidth * 0.95;
+            const imgRatio = this.naturalWidth / this.naturalHeight;
+            const windowRatio = windowWidth / windowHeight;
+            
+            if (imgRatio > windowRatio) {
+                this.style.width = '95vw';
+                this.style.height = 'auto';
+            } else {
+                this.style.height = '90vh';
+                this.style.width = 'auto';
+            }
+        };
+        
+        imageModal.show();
+    }
+
+    // Attach click handlers to all document images
+    document.querySelectorAll('.image-container img').forEach(img => {
+        img.addEventListener('click', function() {
+            expandImage(this);
+        });
+    });
+
+    // Rest of your existing JavaScript...
+    // Status button handling with auto-save
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const btnGroup = this.closest('.btn-group');
+            btnGroup.querySelectorAll('.btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            this.classList.add('active');
+            
+            // Auto-save on status change
+            const imageId = this.getAttribute('data-image-id');
+            const ocrResultId = this.getAttribute('data-ocr-result-id');
+            const container = this.closest('.col-md-6');
+            const textarea = container.querySelector('textarea');
+            const status = this.getAttribute('data-status');
+            const initialValue = textarea.dataset.initialValue || textarea.value;
+            const initialStatus = this.dataset.initialStatus || status;
+            
+            // Check if there are actual changes
+            const hasTextChanged = textarea.value !== initialValue;
+            const hasStatusChanged = status !== initialStatus;
+            
+            if (!hasTextChanged && !hasStatusChanged) {
+                console.log("No changes detected for image ID:", imageId);
+                return; // Do not save or show toast if no changes
+            }
+            
+            const data = {
+                image_id: imageId,
+                ocr_result_id: ocrResultId,
+                corrected_text: textarea.value,
+                status: status
+            };
+
+            // Show loading state on the button
+            const originalHtml = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+            this.disabled = true;
+
+            fetch("{{ url_for('review.batch_submit') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update initial values after successful save
+                    textarea.dataset.initialValue = textarea.value;
+                    this.dataset.initialStatus = status;
+                    // Update border color based on new status
+                    container.className = container.className.replace(/border-(success|danger|secondary)/, '');
+                    if (status === 'approved') {
+                        container.classList.add('border-success');
+                    } else if (status === 'rejected') {
+                        container.classList.add('border-danger');
+                    } else {
+                        container.classList.add('border-secondary');
+                    }
+                    const toast = new bootstrap.Toast(document.getElementById('saveToast'));
+                    toast.show();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error saving changes');
+            })
+            .finally(() => {
+                this.innerHTML = originalHtml;
+                this.disabled = false;
+            });
+        });
+    });
+});
+</script>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-2" style="z-index: 11">
+    <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" style="font-size: 0.8rem; max-width: 200px;">
+        <div class="toast-header bg-light text-dark p-1" style="font-size: 0.8rem;">
+            <strong class="me-auto">Saved</strong>
+            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="toast" aria-label="Close" style="font-size: 0.7rem;"></button>
+        </div>
+        <div class="toast-body p-1" style="font-size: 0.75rem;">
+            Changes saved.
+        </div>
+    </div>
+</div>
+{% endblock %}

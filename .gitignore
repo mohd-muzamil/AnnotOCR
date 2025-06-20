@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+
+# Project-specific
+.env
+static/images/
+
+# Database
+*.sqlite3
