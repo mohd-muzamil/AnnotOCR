@@ -6,7 +6,7 @@ __pycache__/
 static/images/
 
 # Database
-*.sqlite3
+db/
 
 # migrations
 migrations/
