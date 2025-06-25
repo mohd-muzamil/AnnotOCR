@@ -6,73 +6,93 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 100vh;
-        background-color: #f8f9fa;
+        min-height: 80vh;
+        padding: 20px;
     }
-    
     .auth-card {
-        background: white;
-        padding: 2rem;
         border-radius: 10px;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        padding: 2rem;
         width: 100%;
-        max-width: 450px;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .auth-card h2 {
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        color: #1877f2;
+        font-weight: bold;
+    }
+    .password-toggle {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #606770;
+        font-size: 0.9rem;
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        line-height: 1;
+    }
+    .password-toggle.hidden {
+        display: none;
     }
 </style>
 {% endblock %}
 
 {% block body_class %}login-page{% endblock %}
 
+{% block breadcrumbs %}
+{% endblock %}
+
 {% block content %}
 <div class="auth-container">
-    <div class="auth-card">
-        <div class="text-center mb-4">
-            <i class="bi bi-phone" style="font-size: 3rem; color: #0d6efd;"></i>
-            <h2 class="mt-3">Screen Time Extractor</h2>
-            <p class="text-muted">Review and correct iOS Screen Time data</p>
-        </div>
+    <div class="auth-card bg-white border-light">
+        <h2>AnnotOCR</h2>
+        <p class="text-muted mb-4">Review and correct iOS Screen Time data</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show mb-3" role="alert">
                         {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('auth.login') }}">
+        <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
+                <label for="username" class="form-label visually-hidden">Username</label>
                 <input type="text" 
                        class="form-control" 
                        id="username" 
                        name="username" 
+                       placeholder="Username"
                        required
-                       autofocus>
+                       autofocus
+                       aria-label="Username">
             </div>
 
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <div class="input-group">
-                    <input type="password" 
-                           class="form-control" 
-                           id="password" 
-                           name="password" 
-                           required>
-                    <button class="btn btn-outline-secondary" 
-                            type="button" 
-                            id="togglePassword">
-                        <i class="bi bi-eye-fill" id="toggleIcon"></i>
-                    </button>
-                </div>
+            <div class="mb-3 position-relative">
+                <label for="password" class="form-label visually-hidden">Password</label>
+                <input type="password" 
+                       class="form-control" 
+                       id="password" 
+                       name="password" 
+                       placeholder="Password" 
+                       required
+                       aria-label="Password">
+                <button type="button" id="togglePassword" class="password-toggle hidden">Show</button>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100">Login</button>
+            <button type="submit" class="btn btn-primary w-100 py-3" id="loginButton" disabled>Log In</button>
         </form>
     </div>
 </div>
@@ -84,14 +104,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Password toggle functionality
     const togglePassword = document.getElementById('togglePassword');
     const passwordInput = document.getElementById('password');
-    const toggleIcon = document.getElementById('toggleIcon');
+    const loginButton = document.getElementById('loginButton');
+    const usernameInput = document.getElementById('username');
     
-    togglePassword.addEventListener('click', function() {
+    togglePassword.addEventListener('click', function(e) {
+        e.preventDefault();
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
-        toggleIcon.classList.toggle('bi-eye-fill');
-        toggleIcon.classList.toggle('bi-eye-slash-fill');
+        togglePassword.textContent = type === 'password' ? 'Show' : 'Hide';
     });
+    
+    // Enable login button only when both fields are filled and show/hide toggle button
+    function checkFormValidity() {
+        const usernameFilled = usernameInput.value.length > 0;
+        const passwordFilled = passwordInput.value.length > 0;
+        
+        loginButton.disabled = !(usernameFilled && passwordFilled);
+        togglePassword.classList.toggle('hidden', !passwordFilled);
+    }
+    
+    usernameInput.addEventListener('input', checkFormValidity);
+    passwordInput.addEventListener('input', checkFormValidity);
 });
 </script>
 {% endblock %}

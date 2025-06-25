@@ -1,15 +1,15 @@
-# Build stage
+# =======================
+# Stage 1: Builder
+# =======================
 FROM python:3.10.14-slim AS builder
 
-# Set environment variables for build
+# Environment settings
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Set working directory for build
 WORKDIR /app
 
-# Install build dependencies for compiling Python packages with native extensions
-# These are primarily development libraries for image processing and rendering
+# Install build dependencies (needed for native packages like Pillow)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -28,54 +28,51 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Runtime stage
+# =======================
+# Stage 2: Final Image
+# =======================
 FROM python:3.10.14-slim
 
-# Set environment variables for runtime
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+# Accept build args for UID/GID
+ARG HOST_UID=1000
+ARG HOST_GID=1000
 
-# Set working directory for runtime
 WORKDIR /app
 
-# Install runtime dependencies for application functionality
-# Includes OCR tools, PDF processing, graphical libraries, and database support
+# Install runtime system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    tesseract-ocr \
-    tesseract-ocr-all \
-    poppler-utils \
-    ghostscript \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libmagic1 \
+    openssh-client \
+    sshpass \
+    bash \
+    sqlite3 \
+    libjpeg62-turbo \
+    libopenjp2-7 \
     && rm -rf /var/lib/apt/lists/*
 
-# Ensure sqlite3 is available
-RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+# Create group and user with host UID/GID
+RUN groupadd -g ${HOST_GID} appuser && \
+    useradd -m -u ${HOST_UID} -g appuser appuser
 
-# Create a non-root user for security
-RUN useradd -m -u 1000 appuser
-
-# Copy Python dependencies from builder stage
+# Copy Python site-packages and binaries from builder
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy project files
 COPY . .
 
-# Create instance directory in container
-RUN mkdir -p /app/db && chown -R 1000:1000 /app/db
+# Prepare directories and set ownership
+RUN mkdir -p /app/db /app/static/data && \
+    chown -R ${HOST_UID}:${HOST_GID} /app/db /app/static/data
 
-# Set permissions for entrypoint script
+# Set permissions for entrypoint
 RUN chmod +x /app/entrypoint.sh
 
 # Switch to non-root user
 USER appuser
 
-# Add health check
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD ["python", "-c", "import os; os.system('echo OK')"]
 
-# Default run command
+# Default command
 CMD ["/app/entrypoint.sh"]

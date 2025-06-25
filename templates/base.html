@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Screen Time Extractor{% block title %}{% endblock %}</title>
+    <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/PROSIT.jpeg') }}">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -11,6 +12,91 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    <!--  Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #1c1e21;
+        }
+        .main-content-container {
+            background-color: #f0f2f5;
+        }
+        .top-navbar {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #dddfe2;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand span {
+            color: #1877f2 !important;
+            font-weight: bold;
+        }
+        .breadcrumb-item a {
+            color: #1877f2;
+            text-decoration: none;
+        }
+        .breadcrumb-item a:hover {
+            text-decoration: underline;
+        }
+        .studies-navbar {
+            background-color: #ffffff !important;
+            border-bottom: 1px solid #dddfe2;
+        }
+        .studies-navbar .nav-link {
+            color: #1c1e21;
+        }
+        .studies-navbar .nav-link:hover {
+            color: #1877f2;
+        }
+        .dropdown-menu {
+            border: 1px solid #dddfe2;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .dropdown-item {
+            color: #1c1e21;
+        }
+        .dropdown-item:hover {
+            background-color: #f0f2f5;
+            color: #1877f2;
+        }
+        .main-content {
+            background-color: #f0f2f5;
+        }
+        .btn-primary, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-light, .btn-dark, .btn-outline-primary, .btn-outline-secondary, .btn-outline-success, .btn-outline-info, .btn-outline-warning, .btn-outline-light, .btn-outline-dark, .btn-edit, .btn-manage, .btn-export {
+            background-color: #1877f2 !important;
+            border-color: #1877f2 !important;
+            color: white !important;
+        }
+        .btn-primary:hover, .btn-secondary:hover, .btn-success:hover, .btn-info:hover, .btn-warning:hover, .btn-light:hover, .btn-dark:hover, .btn-outline-primary:hover, .btn-outline-secondary:hover, .btn-outline-success:hover, .btn-outline-info:hover, .btn-outline-warning:hover, .btn-outline-light:hover, .btn-outline-dark:hover, .btn-edit:hover, .btn-manage:hover, .btn-export:hover {
+            background-color: #166fe5 !important;
+            border-color: #166fe5 !important;
+            color: white !important;
+        }
+        .btn-danger, .btn-delete {
+            background-color: #d32f2f !important;
+            border-color: #d32f2f !important;
+            color: white !important;
+        }
+        .btn-danger:hover, .btn-delete:hover {
+            background-color: #b71c1c !important;
+            border-color: #b71c1c !important;
+            color: white !important;
+        }
+        .card-header, .card-header-tabs, .card-header-pills {
+            background-color: #e7f3ff !important; /* A light blue to match Facebook theme */
+            border-bottom: 1px solid #dddfe2 !important;
+            color: #1c1e21 !important;
+        }
+        a {
+            color: #1877f2;
+            text-decoration: none;
+        }
+        a:hover {
+            color: #166fe5;
+            text-decoration: underline;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -19,18 +105,22 @@
         <!-- Top Navigation Bar -->
         <nav class="navbar navbar-expand navbar-light bg-light top-navbar">
             <div class="container-fluid">
-                <!-- Brand/Logo -->
-                <a class="navbar-brand" href="{{ url_for('dashboard.index') }}">
-                    <i class="bi bi-phone me-2"></i>
-                    Screen Time Extractor
-                </a>
-                
-                <!-- Breadcrumbs -->
-                <nav aria-label="breadcrumb" class="me-auto">
-                    <ol class="breadcrumb mb-0">
-                        {% block breadcrumbs %}{% endblock %}
+                <!-- Breadcrumbs moved to top left, with overflow to next line -->
+                <nav aria-label="breadcrumb" class="me-auto" style="flex-wrap: wrap; max-width: 25%; overflow: visible;">
+                    <ol class="breadcrumb mb-0" style="flex-wrap: wrap;">
+                        {% block breadcrumbs %}
+                            <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                        {% endblock %}
                     </ol>
                 </nav>
+                
+                <!-- Brand/Logo without link, fixed at center of navbar -->
+                <div class="d-flex justify-content-center align-items-center position-absolute start-50" style="transform: translateX(-50%);">
+                    <div class="navbar-brand" style="display: flex; flex-direction: row; align-items: center; margin-right: 0;">
+                        <img src="{{ url_for('static', filename='images/PROSIT.jpeg') }}" alt="PROSIT Logo" style="height: 50px; margin-right: 10px; border-radius: 10%;">
+                        <span style="font-size: 14px; color: #333;">PROSIT</span>
+                    </div>
+                </div>
 
                 <!-- User Dropdown -->
                 {% if current_user.is_authenticated %}
@@ -40,11 +130,11 @@
                         <span class="d-none d-sm-inline">{{ current_user.username }}</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        {% if current_user.role == 'admin' %}
-                        <li><a class="dropdown-item" href="{{ url_for('admin.create_user') }}">Create User</a></li>
                         <li><a class="dropdown-item" href="{{ url_for('admin.users') }}">Manage Users</a></li>
-                        <li><hr class="dropdown-divider"></li>
+                        {% if current_user.role == 'admin' %}
+                        <li><a class="dropdown-item" href="{{ url_for('admin.studies') }}">Manage Studies</a></li>
                         {% endif %}
+                        <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Sign out</a></li>
                     </ul>
                 </div>
@@ -65,7 +155,7 @@
                             {% for study in all_studies %}
                             <li>
                                 <a class="dropdown-item {% if request.endpoint == 'dashboard.study' and study.id == current_study.id %}active{% endif %}" 
-                                   href="{{ url_for('dashboard.study', study_id=study.id) }}">
+                                   href="{{ url_for('dashboard.study', study_name=study.name) }}">
                                     <i class="bi bi-folder me-2"></i>
                                     {{ study.name }}
                                 </a>
@@ -78,22 +168,27 @@
         </nav>
         {% endif %}
 
-        <!-- Main Content Area -->
-        <main class="container-fluid py-4 main-content">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+    <!-- Main Content Area -->
+    <main class="container-fluid py-4 main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-            {% block content %}{% endblock %}
-        </main>
-    </div>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer with Signature -->
+    <footer class="text-end py-2" style="position: fixed; bottom: 0; right: 20px; color: #666; font-size: 12px; font-family: 'Georgia', serif;">
+        © PROSIT Lab — Dalhousie University
+    </footer>
+</div>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -104,5 +199,22 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        // Auto-dismiss alerts after 3 seconds and hide "Logged in successfully" message
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                if (alert.textContent.includes('Logged in successfully')) {
+                    alert.style.display = 'none';
+                } else {
+                    setTimeout(function() {
+                        alert.classList.add('fade');
+                        alert.classList.remove('show');
+                        setTimeout(() => alert.remove(), 500); // Remove after fade out transition
+                    }, 3000); // Dismiss after 3 seconds
+                }
+            });
+        });
+    </script>
 </body>
 </html>

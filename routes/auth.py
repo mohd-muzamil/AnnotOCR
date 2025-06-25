@@ -17,6 +17,12 @@ def login():
             flash('Invalid username or password', 'danger')  # Changed to 'danger' for red alert
             return redirect(url_for('auth.login'))
             
+        # Update last login timestamp
+        from datetime import datetime
+        from app import db
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        
         login_user(user)
         flash('Logged in successfully!', 'success')
         return redirect(url_for('dashboard.index'))

@@ -1,27 +1,47 @@
 from app import create_app
 from celery import Celery
-from services.ocr_image_extractor import extract_ocr_for_images
+import os
+from services.ocr_image_extractor import ocr_processor
+
+# Create the Flask app instance
+flask_app = create_app()
 
 def make_celery(app):
+    # Pull Celery config from Flask config or .env
+    broker = app.config.get('CELERY_BROKER_URL') or os.getenv('CELERY_BROKER_URL')
+    backend = app.config.get('result_backend') or os.getenv('CELERY_RESULT_BACKEND')
+
+    if not broker or not backend:
+        raise RuntimeError(
+            "Missing Celery configuration: "
+            "Set CELERY_BROKER_URL and CELERY_RESULT_BACKEND in your .env or config.py"
+        )
+
     celery = Celery(
         app.import_name,
-        # backend=app.config['CELERY_RESULT_BACKEND'],
-        # broker=app.config['CELERY_BROKER_URL']
+        broker=broker,
+        backend=backend
     )
     celery.conf.update(app.config)
-    TaskBase = celery.Task
 
-    class ContextTask(TaskBase):
+    class ContextTask(celery.Task):
         def __call__(self, *args, **kwargs):
             with app.app_context():
-                return TaskBase.__call__(self, *args, **kwargs)
+                return self.run(*args, **kwargs)
 
     celery.Task = ContextTask
     return celery
 
-app = create_app()
-celery = make_celery(app)
+# Initialize Celery
+celery = make_celery(flask_app)
 
-@celery.task
+# Ensure Celery can discover tasks in the services directory
+celery.autodiscover_tasks(['services'])
+
+# Example task
+@celery.task(name="tasks.process_image_task")
 def process_image_task(image_id):
-    return extract_ocr_for_images([image_id])
+    """
+    Background task to process OCR for a single image.
+    """
+    return ocr_processor.extract_ocr_for_images([image_id])

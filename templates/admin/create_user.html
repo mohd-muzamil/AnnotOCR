@@ -16,25 +16,56 @@
     {% endwith %}
     
     <form method="POST" action="{{ url_for('admin.create_user') }}">
-        <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" class="form-control" id="username" name="username" required placeholder="Enter username">
-        </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required placeholder="Enter password">
-        </div>
-        <div class="form-group">
-            <label for="confirm_password">Confirm Password</label>
-            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required placeholder="Confirm password">
-        </div>
-        <div class="form-group">
-            <label for="role">Role</label>
-            <select class="form-control" id="role" name="role">
-                <option value="reviewer">Reviewer</option>
-                <option value="admin">Admin</option>
-            </select>
-        </div>
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <td style="width: 30%;"><label for="username">Username</label></td>
+                    <td style="width: 70%;"><input type="text" class="form-control" id="username" name="username" required placeholder="Enter username"></td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="email">Email</label></td>
+                    <td style="width: 70%;"><input type="email" class="form-control" id="email" name="email" placeholder="Enter email"></td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="password">Password</label></td>
+                    <td style="width: 70%;"><input type="password" class="form-control" id="password" name="password" required placeholder="Enter password"></td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="confirm_password">Confirm Password</label></td>
+                    <td style="width: 70%;"><input type="password" class="form-control" id="confirm_password" name="confirm_password" required placeholder="Confirm password"></td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="role">Role</label></td>
+                    <td style="width: 70%;">
+                        <select class="form-control" id="role" name="role">
+                            <option value="reviewer">Reviewer</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="studies">Assigned Studies (for Reviewers)</label></td>
+                    <td style="width: 70%;">
+                        <div class="input-group">
+                            <button class="btn btn-outline-secondary dropdown-toggle form-control" type="button" id="studiesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Select Studies
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="studiesDropdown" style="max-height: 300px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 0.25rem;">
+                                {% for study in studies %}
+                                    <li style="padding: 0.25rem 0.5rem;">
+                                        <div class="form-check">
+                                            <input class="form-check-input study-checkbox" type="checkbox" name="studies[]" value="{{ study.id }}" id="study_{{ study.id }}">
+                                            <label class="form-check-label" for="study_{{ study.id }}">{{ study.name }}</label>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <small class="form-text text-muted">Click to select multiple studies. Only applicable for reviewers.</small>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
         <button type="submit" class="btn btn-primary mt-3">Create User</button>
         <a href="{{ url_for('admin.users') }}" class="btn btn-secondary mt-3">Cancel</a>
     </form>

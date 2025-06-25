@@ -1,23 +1,11 @@
 #!/bin/bash
+# Ensure necessary directories exist before starting the application
+mkdir -p /app/db
+mkdir -p /app/static/images
+mkdir -p /app/static/data
 
-# No database readiness check needed for SQLite3
+# Note: Permission setting commands are omitted to avoid 'Operation not permitted' errors in Docker environment
+# Directories are created with default permissions
 
-# Apply database migrations
-flask db upgrade
-
-# Load initial data
-flask shell <<EOF
-from services.data_loader import load_images_from_static
-load_images_from_static()
-exit()
-EOF
-
-# Run OCR image extraction on initial build
-flask shell <<EOF
-from services.ocr_image_extractor import generate_ocr_for_all_images
-generate_ocr_for_all_images()
-exit()
-EOF
-
-# Start Gunicorn
+# Start Gunicorn without specifying user due to user 1017 not existing
 exec gunicorn --bind 0.0.0.0:5000 "wsgi:app"

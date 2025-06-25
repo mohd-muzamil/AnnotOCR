@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Study: {{ study.name }}</h1>
+    <div class="mb-3">
+        <a href="{{ url_for('admin.studies') }}" class="btn btn-secondary">Back to Studies</a>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div class="mb-3 d-flex justify-content-start">
+        <form method="POST" class="mr-2">
+            <button type="submit" name="action" value="trigger_ocr_unprocessed" class="btn btn-success btn-md" title="Trigger OCR processing for all unprocessed images in this study.">Trigger OCR for Unprocessed Images</button>
+        </form>
+        <form action="{{ url_for('admin.trigger_ocr', study_id=study.id) }}" method="POST" class="mr-2">
+            <button type="submit" class="btn btn-success btn-md">Trigger OCR</button>
+        </form>
+        <form action="{{ url_for('admin.reload_images_for_study', study_id=study.id) }}" method="POST" class="mr-2">
+            <button type="submit" class="btn btn-warning btn-md" onclick="return confirm('Are you sure you want to reload images for this study?');" title="Reload images for this study from the static directory into the database.">Reload Images</button>
+        </form>
+        <a href="{{ url_for('admin.upload_images', study_id=study.id) }}" class="btn btn-info btn-md" title="Upload new images to this study.">Upload Images</a>
+        <form action="{{ url_for('admin.delete_study', study_id=study.id) }}" method="POST" class="mr-2">
+            <button type="submit" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to delete this study?');">Delete Study</button>
+        </form>
+    </div>
+    <form method="POST">
+        <div class="mb-3 d-flex justify-content-start">
+            <button type="submit" name="action" value="delete" class="btn btn-danger btn-md" onclick="return confirm('Are you sure you want to delete the selected images?');" title="Delete the selected images from the study.">Delete Selected Images</button>
+            <button type="submit" name="action" value="trigger_ocr_selected" class="btn btn-primary btn-md ml-2" title="Trigger OCR processing for the selected images only.">Trigger OCR for Selected Images</button>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" onclick="toggleCheckboxes(this)"></th>
+                    <th>ID</th>
+                    <th>Filename</th>
+                    <th>Filepath</th>
+                    <th>OCR Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for image in images %}
+                <tr>
+                    <td><input type="checkbox" name="image_ids[]" value="{{ image.id }}"></td>
+                    <td>{{ image.id }}</td>
+                    <td>{{ image.filename }}</td>
+                    <td>{{ image.filepath }}</td>
+                    <td>{{ image.ocr_status }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">No images found for this study.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+    <a href="{{ url_for('admin.studies') }}" class="btn btn-secondary mt-3">Back to Studies</a>
+</div>
+<script>
+function toggleCheckboxes(source) {
+    checkboxes = document.getElementsByName('image_ids[]');
+    for(var i=0, n=checkboxes.length; i<n; i++) {
+        checkboxes[i].checked = source.checked;
+    }
+}
+</script>
+{% endblock %}

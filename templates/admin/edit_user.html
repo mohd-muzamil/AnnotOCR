@@ -1,0 +1,103 @@
+c{% extends "base.html" %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Edit User</h1>
+    <p>Use this form to edit the user account details.</p>
+    
+    <!-- Removed duplicate flashed messages block as it is already handled in base.html -->
+    
+    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+        <table class="table table-bordered">
+            <tbody>
+                <tr>
+                    <td style="width: 30%;"><label for="username">Username</label></td>
+                    <td style="width: 70%;">
+                        {% if current_user.role == 'admin' %}
+                            <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required placeholder="Enter username">
+                        {% else %}
+                            <input type="text" class="form-control" readonly value="{{ user.username }}" />
+                            <input type="hidden" name="username" value="{{ user.username }}" />
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="email">Email</label></td>
+                    <td style="width: 70%;">
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email if user.email else '' }}" placeholder="Enter email">
+                    </td>
+                </tr>
+                <tr>
+                    {% if current_user.role == 'admin' %}
+                    <td style="width: 30%;"><label for="role">Role</label></td>
+                    <td style="width: 70%;">
+                        <select class="form-control" id="role" name="role">
+                            <option value="reviewer" {% if user.role == 'reviewer' %}selected{% endif %}>Reviewer</option>
+                            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                        </select>
+                    </td>
+                    {% else %}
+                    <td style="width: 30%;"><label>Role</label></td>
+                    <td style="width: 70%;">{{ user.role | capitalize }}</td>
+                    {% endif %}
+                </tr>
+                {% if current_user.role == 'admin' %}
+                <tr>
+                    <td style="width: 30%;"><label for="studies">Assigned Studies (for Reviewers)</label></td>
+                    <td style="width: 70%;">
+                        {% if user.role == 'admin' %}
+                            <div class="mt-2">
+                                <p class="mb-1"><strong>Currently Assigned Studies:</strong></p>
+                                <p class="text-muted">Assigned to all the studies</p>
+                            </div>
+                        {% else %}
+                            <div class="input-group mb-2">
+                                <button class="btn btn-outline-secondary dropdown-toggle form-control" type="button" id="studiesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Select Studies
+                                </button>
+                                <ul class="dropdown-menu w-100" aria-labelledby="studiesDropdown" style="max-height: 300px; overflow-y: auto; border: 1px solid #ced4da; border-radius: 0.25rem;">
+                                    {% for study in studies %}
+                                        <li style="padding: 0.25rem 0.5rem;">
+                                            <div class="form-check">
+                                                <input class="form-check-input study-checkbox" type="checkbox" name="studies[]" value="{{ study.id }}" id="study_{{ study.id }}" {% if study in user.studies %}checked{% endif %}>
+                                                <label class="form-check-label" for="study_{{ study.id }}">{{ study.name }}</label>
+                                            </div>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <small class="form-text text-muted mb-2">Click to select multiple studies. Only applicable for reviewers.</small>
+                            <div class="mt-2">
+                                <p class="mb-1"><strong>Currently Assigned Studies:</strong></p>
+                                {% if user.studies %}
+                                    <ul class="list-group">
+                                        {% for study in user.studies %}
+                                            <li class="list-group-item">{{ study.name }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="text-muted">No studies assigned.</p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td style="width: 30%;"><label for="password">Reset Password (leave blank to keep current password)</label></td>
+                    <td style="width: 70%;"><input type="password" class="form-control" id="password" name="password" placeholder="Enter new password"></td>
+                </tr>
+                <tr>
+                    <td style="width: 30%;"><label for="confirm_password">Confirm New Password</label></td>
+                    <td style="width: 70%;"><input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="Confirm new password"></td>
+                </tr>
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary mt-3">Update User</button>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-secondary mt-3">Cancel</a>
+        <!-- Removed Manage Studies dropdown as per user request -->
+    </form>
+</div>
+{% endblock %}

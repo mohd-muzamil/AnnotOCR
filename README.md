@@ -138,63 +138,98 @@ flowchart TD
 
 ## Setup Instructions
 
-1. **Prerequisites**:
-   - Python 3.8+
-   - Docker (optional)
+### Development Environment Setup
 
-2. **Install dependencies**:
+1. **Prerequisites**:
+   - Python 3.10+
+   - Docker (optional for production)
+
+2. **Create and Activate Virtual Environment**:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   ```
+
+3. **Install Dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Database setup**:
+4. **Database Setup**:
+   Ensure the database directory exists and initialize the database with migrations:
    ```bash
-   flask db upgrade
+   mkdir -p db
+   flask db init  # Initialize migration repository
+   flask db migrate -m "Initial migration"  # Generate migration script
+   flask db upgrade  # Apply migrations to create database schema
    ```
 
-4. **Create admin user**:
+5. **Create Admin User**:
    ```bash
-   flask create-admin <username>
+   flask create-admin <username> <password>
    ```
 
-5. **Run development server**:
+6. **Run Development Server**:
    ```bash
    flask run
    ```
+   Access the application at `http://localhost:5000`.
 
-6. **Run with Docker Compose**:
-   Follow these detailed steps to build and run the application using Docker Compose, which will handle both the application and its dependencies (like Redis for Celery) in a containerized environment:
+### Production Environment Setup (Using Docker)
 
-   - **Ensure Docker and Docker Compose are installed**: Verify that you have Docker and Docker Compose installed on your system. You can download them from the official Docker website if needed.
-   - **Navigate to the project directory**: Open a terminal and change to the directory containing the `docker-compose.yml` file.
-     ```bash
-     cd /path/to/screen_extract
-     ```
-   - **Build the Docker images**: This step builds the custom Docker image for the application as defined in the Dockerfile.
-     ```bash
-     docker-compose build
-     ```
-   - **Start the containers**: This command starts all services defined in `docker-compose.yml`, including the Flask app, Redis for Celery, and any other configured services. The `--build` flag ensures the image is rebuilt if there are changes.
-     ```bash
-     docker-compose up --build
-     ```
-   - **Access the application**: Once the containers are running, the application will be accessible at `http://localhost:5000` (or the port specified in your `docker-compose.yml` file).
-   - **View container logs**: To see the logs for debugging or monitoring, you can run:
-     ```bash
-     docker-compose logs
-     ```
-   - **Stop the containers**: When you're done, stop the running containers with:
-     ```bash
-     docker-compose down
-     ```
-   - **Database initialization**: On the first run, the entrypoint script will handle database migrations and initial data loading automatically. If you need to create an admin user, you can access the container shell:
-     ```bash
-     docker-compose exec app bash
-     flask create-admin <username>
-     exit
-     ```
+1. **Prerequisites**:
+   - Docker and Docker Compose installed on your system.
 
-   These steps ensure a consistent and isolated environment for running the Study Review Management System.
+2. **Navigate to the Project Directory**:
+   Open a terminal and change to the directory containing the `docker-compose.yml` file.
+   ```bash
+   cd /path/to/AnnotOCR
+   ```
+
+3. **Set Environment Variables for UID and GID**:
+   Before building and starting the Docker containers, set the `HOST_UID` and `HOST_GID` environment variables to match your user and group IDs. This helps avoid permission issues with mounted volumes.
+   ```bash
+   export HOST_UID=$(id -u)
+   export HOST_GID=$(id -g)
+   ```
+
+4. **Build the Docker Images**:
+   This step builds the custom Docker image for the application as defined in the Dockerfile.
+   ```bash
+   docker-compose build
+   ```
+
+4. **Start the Containers**:
+   This command starts all services defined in `docker-compose.yml`, including the Flask app, Redis for Celery, and any other configured services.
+   ```bash
+   docker-compose up -d --build
+   ```
+   The `-d` flag runs the containers in detached mode.
+
+5. **Access the Application**:
+   Once the containers are running, the application will be accessible at `http://localhost:5000` (or the port specified in your `docker-compose.yml` file).
+
+6. **View Container Logs**:
+   To see the logs for debugging or monitoring, you can run:
+   ```bash
+   docker-compose logs
+   ```
+
+7. **Stop the Containers**:
+   When you're done, stop the running containers with:
+   ```bash
+   docker-compose down
+   ```
+
+8. **Database Initialization and Admin User**:
+   On the first run, the entrypoint script handles database migrations and initial data loading automatically. If you need to create an admin user manually:
+   ```bash
+   docker-compose exec web bash
+   flask create-admin <username> <password>
+   exit
+   ```
+
+These steps ensure a consistent and isolated environment for running the Study Review Management System in both development and production setups.
 
 ## API Documentation
 

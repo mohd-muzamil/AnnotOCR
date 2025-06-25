@@ -13,9 +13,7 @@
       <tr>
         <th>Participant ID</th>
         <th>Total Images</th>
-        <th>Pending</th>
-        <th>Approved</th>
-        <th>Rejected</th>
+        <th>OCR Correction Status</th>
         <th>Progress</th>
       </tr>
     </thead>
@@ -23,18 +21,22 @@
       {% for item in participants %}
       <tr>
         <td>
-          <a href="{{ url_for('review.participant_review', study_id=study.id, participant_id=item.participant.id) }}">
-            {{ item.participant.identifier }}
+          <a href="{{ url_for('review.participant_review', study_name=study.name, participant_name=item.participant.name) }}">
+            {{ item.participant.name }}
           </a>
         </td>
         <td>{{ item.image_count }}</td>
-        <td>{{ item.pending_count if item.pending_count is defined else 0 }}</td>
-        <td>{{ item.approved_count }}</td>
-        <td>{{ item.rejected_count if item.rejected_count is defined else 0 }}</td>
+        <td>
+          {% if item.correction_status is defined %}
+            {{ item.correction_status }}
+          {% else %}
+            Not Available
+          {% endif %}
+        </td>
         <td>
           <div class="progress">
-            <div class="progress-bar" style="width: {{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) if item.image_count > 0 else 0 }}%">
-              {{ (((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) | round(1)) if item.image_count > 0 else 0 }}%
+            <div class="progress-bar {{ 'bg-success' if item.image_count > 0 and (((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) >= 100) else 'bg-warning' }}" role="progressbar" style="width: {{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) if item.image_count > 0 else 0 }}%" aria-valuenow="{{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) | round(0) if item.image_count > 0 else 0 }}" aria-valuemin="0" aria-valuemax="100">
+              {{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) | round(1) if item.image_count > 0 else 0 }}%
             </div>
           </div>
         </td>

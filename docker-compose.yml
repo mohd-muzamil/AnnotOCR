@@ -8,7 +8,11 @@ services:
       - "6379:6379"
 
   web:
-    build: .
+    build:
+      context: .
+      args:
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
     container_name: flask_app
     depends_on:
       - redis
@@ -16,9 +20,10 @@ services:
       - "5000:5000"
     volumes:
       - .:/app
-      - sqlite_data:/app/db
+      - ~/.ssh:/home/appuser/.ssh
     env_file:
       - .env
+    user: "${HOST_UID}:${HOST_GID}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
@@ -26,17 +31,19 @@ services:
       retries: 3
 
   celery:
-    build: .
+    build:
+      context: .
+      args:
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
     container_name: celery_worker
     depends_on:
       - redis
       - web
     volumes:
       - .:/app
-      - sqlite_data:/app/db
+      - ~/.ssh:/home/appuser/.ssh
     env_file:
       - .env
+    user: "${HOST_UID}:${HOST_GID}"
     command: celery -A celery_worker.celery worker --loglevel=info
-
-volumes:
-  sqlite_data:

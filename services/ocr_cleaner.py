@@ -47,16 +47,15 @@ APP_SUGGESTIONS = load_app_suggestions()
 
 def clean_ocr_text(ocr_text, app_suggestions=APP_SUGGESTIONS):
     """
-    Clean the raw OCR text by matching it against a list of known app suggestions.
-    This function attempts to extract relevant app names and screen time information,
-    filtering out junk or irrelevant text.
+    Clean the raw OCR text by removing empty lines and lines with only special characters,
+    and attempt to correct app names based on provided suggestions while preserving line breaks.
     
     Args:
         ocr_text (str): The raw OCR text extracted from screenshots.
         app_suggestions (list): List of known app names for matching. Defaults to APP_SUGGESTIONS.
         
     Returns:
-        str: Cleaned text with matched app names and relevant information.
+        str: Cleaned text with irrelevant lines removed and app names corrected where possible.
     """
     if not ocr_text:
         return ""
@@ -66,17 +65,21 @@ def clean_ocr_text(ocr_text, app_suggestions=APP_SUGGESTIONS):
     
     for line in lines:
         line = line.strip()
-        if not line:
+        if not line:  # Remove empty lines
+            continue
+        if all(c in "!@#$%^&*()-_=+[]{}|;:,.<>?/~`'\" " for c in line):  # Remove lines with only special characters
             continue
             
-        # Check if the line contains any app name from suggestions
+        # Attempt to correct app names in the line
+        corrected_line = line
         for app in app_suggestions:
             if app.lower() in line.lower():
-                cleaned_lines.append(line)
+                # Replace the matched portion with the correct app name capitalization
+                start_idx = line.lower().find(app.lower())
+                end_idx = start_idx + len(app)
+                corrected_line = line[:start_idx] + app + line[end_idx:]
                 break
-        else:
-            # If no app name is found, check for time formats (e.g., "1h 30m", "45m", "2:15")
-            if any(time_indicator in line.lower() for time_indicator in ['h', 'm', ':']) and any(char.isdigit() for char in line):
-                cleaned_lines.append(line)
+                
+        cleaned_lines.append(corrected_line)
     
     return '\n'.join(cleaned_lines) if cleaned_lines else ocr_text

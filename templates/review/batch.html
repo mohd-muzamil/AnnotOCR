@@ -1,30 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Review - {{ participant.identifier }}{% endblock %}
+{% block title %}Review - {{ participant.name }}{% endblock %}
 
 {% block breadcrumbs %}
     <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
-    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.study', study_id=study.id) }}">{{ study.name }}</a></li>
-    <li class="breadcrumb-item active">{{ participant.identifier }}</li>
+    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.study', study_name=study.name) }}">{{ study.name }}</a></li>
+    <li class="breadcrumb-item active">{{ participant.name }}</li>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">
-            Review: {{ participant.identifier }}
+            Review: {{ participant.name }}
             <span class="badge bg-{{ 'success' if ((approved_count + (rejected_count if rejected_count is defined else 0)) / image_count * 100) == 100 else 'warning' }}">
                 {{ (((approved_count + (rejected_count if rejected_count is defined else 0)) / image_count * 100) | round(1)) if image_count > 0 else 0 }}% Complete
             </span>
         </h1>
         <div>
-            <span class="me-2">Total: {{ image_count }}</span>
-            <span class="me-2">{{ approved_count }} Approved</span>
-            <span class="me-2">{{ rejected_count if rejected_count is defined else 0 }} Rejected</span>
-            <span class="me-2">{{ pending_count if pending_count is defined else 0 }} Pending</span>
+            <span class="me-2" id="totalCount">Total: {{ image_count }}</span>
+            <span class="me-2" id="pendingCount">Pending: {{ pending_count if pending_count is defined else 0 }}</span>
+            <span class="me-2" id="approvedCount">Approved: {{ approved_count }}</span>
+            <span class="me-2" id="rejectedCount">Rejected: {{ rejected_count if rejected_count is defined else 0 }}</span>
             <!-- Debug: approved_count={{ approved_count }}, rejected_count={{ rejected_count if rejected_count is defined else 0 }}, image_count={{ image_count }} -->
             <div class="progress" style="width: 200px; height: 10px; display: inline-block;">
-                <div class="progress-bar bg-success" 
+                <div class="progress-bar bg-success" id="progressBar"
                      style="width: {{ ((approved_count + (rejected_count if rejected_count is defined else 0)) / image_count * 100) if image_count is defined and image_count > 0 else 0 }}%">
                 </div>
             </div>
@@ -33,12 +33,12 @@
 
     <div class="row">
         {% for image in images %}
-        <div class="col-12 mb-4">
-            <div class="card">
-                <div class="row g-0">
-                    <!-- Image Column (40%) -->
-                    <div class="col-md-4">
-                        <div class="image-container p-2" style="height: 80vh; max-height: 750px;">
+    <div class="col-12 mb-3">
+        <div class="card">
+            <div class="row g-0">
+                <!-- Image Column (40%) -->
+                <div class="col-md-4">
+                    <div class="image-container p-1" style="height: 70vh; max-height: 650px;">
                             <img src="{{ url_for('static', filename=image.filepath) }}" 
                                  class="img-fluid h-100 w-auto cursor-zoom" 
                                  style="object-fit: contain; max-width: 100%;"
@@ -51,9 +51,9 @@
                         <div class="row h-100">
                             <!-- OCR Text Column (50% of right side) -->
                             <div class="col-md-6 border-end">
-                                <div class="p-2 h-100 d-flex flex-column">
-                                    <h6 class="text-muted mb-2">Original OCR</h6>
-                                    <div class="ocr-text flex-grow-1 bg-light p-2 overflow-auto" style="max-height: 65vh;">
+                                <div class="p-1 h-100 d-flex flex-column">
+                                    <h6 class="text-muted mb-1">Original OCR</h6>
+                                    <div class="ocr-text flex-grow-1 bg-light p-1 overflow-auto" style="max-height: 60vh;">
                                         {{ image.ocr_text if image.ocr_text else 'No OCR results' }}
                                     </div>
                                 </div>
@@ -61,11 +61,18 @@
                             
                             <!-- Corrected Text Column (50% of right side) -->
                             <div class="col-md-6 {% if image.status == 'approved' %}border-success{% elif image.status == 'rejected' %}border-danger{% else %}border-secondary{% endif %}">
-                                <div class="p-2 h-100 d-flex flex-column">
-                                    <h6 class="text-muted mb-2">Your Correction</h6>
-                                    <textarea class="form-control flex-grow-1 mb-2" 
-                                              placeholder="Enter correction..."
-                                              style="min-height: 65vh; resize: none;">{{ image.corrected_text if image.corrected_text else image.ocr_text if image.ocr_text else '' }}</textarea>
+                                <div class="p-1 h-100 d-flex flex-column">
+                                    <h6 class="text-muted mb-1">Your Correction</h6>
+                                    <div style="position: relative; flex-grow: 1;">
+                                        <textarea class="form-control mb-1 correction-textarea" 
+                                                  placeholder="Enter correction..."
+                                                  style="min-height: 60vh; resize: none; width: 100%; height: 100%;">{{ image.corrected_text if image.corrected_text else image.ocr_text if image.ocr_text else '' }}</textarea>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary clear-btn" 
+                                                style="position: absolute; top: 5px; right: 5px; padding: 2px 8px; font-size: 1.4em; line-height: 1;"
+                                                title="Clear text">
+                                            <i class="fas fa-eraser"></i>
+                                        </button>
+                                    </div>
                                               
                                     <!-- Status Buttons -->
                                     <div class="btn-group w-100 mb-2">
@@ -143,6 +150,57 @@
         transform: scale(1.02);
     }
     
+    .btn-outline-secondary[data-status="pending"] {
+        color: #6c757d !important;
+        border-color: #6c757d !important;
+        background-color: transparent !important;
+    }
+    
+    .btn-outline-secondary[data-status="pending"]:hover {
+        background-color: rgba(108, 117, 125, 0.1) !important;
+        color: #6c757d !important;
+    }
+    
+    .btn-outline-secondary[data-status="pending"].active {
+        background-color: #6c757d !important;
+        color: white !important;
+        border-color: #6c757d !important;
+    }
+    
+    .btn-outline-success[data-status="approved"] {
+        color: #28a745 !important;
+        border-color: #28a745 !important;
+        background-color: transparent !important;
+    }
+    
+    .btn-outline-success[data-status="approved"]:hover {
+        background-color: rgba(40, 167, 69, 0.1) !important;
+        color: #28a745 !important;
+    }
+    
+    .btn-outline-success[data-status="approved"].active {
+        background-color: #28a745 !important;
+        color: white !important;
+        border-color: #28a745 !important;
+    }
+    
+    .btn-outline-danger[data-status="rejected"] {
+        color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        background-color: transparent !important;
+    }
+    
+    .btn-outline-danger[data-status="rejected"]:hover {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        color: #dc3545 !important;
+    }
+    
+    .btn-outline-danger[data-status="rejected"].active {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border-color: #dc3545 !important;
+    }
+    
     @media (max-width: 768px) {
         .image-container {
             height: 40vh;
@@ -186,12 +244,13 @@ document.addEventListener('DOMContentLoaded', function() {
         suggestionList.style.border = '1px solid #ccc';
         suggestionList.style.listStyle = 'none';
         suggestionList.style.padding = '0';
-        suggestionList.style.margin = '2px 0 0 0';
+        suggestionList.style.margin = '0 0 2px 0';
         suggestionList.style.maxHeight = '200px';
         suggestionList.style.overflowY = 'auto';
         suggestionList.style.zIndex = '1000';
         suggestionList.style.display = 'none';
         suggestionList.style.width = textarea.offsetWidth + 'px';
+        suggestionList.style.bottom = '100%'; // Position above the textarea
         wrapper.appendChild(suggestionList);
         
         // Function to update suggestions for this textarea
@@ -283,8 +342,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         suggestionList.style.display = 'none';
                         console.log("Suggestion selected with Tab:", suggestionText);
                     }
+                } else {
+                    e.preventDefault(); // Prevent default Tab behavior even if no suggestions are visible
                 }
-                // Do not prevent default behavior if no suggestions are visible, allowing normal tab navigation
             } else if (suggestionList.style.display !== 'none') {
                 const items = suggestionList.querySelectorAll('li');
                 if (items.length === 0) return;
@@ -407,11 +467,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         imageModal.show();
     }
+    
+    // Close modal when clicking outside the image
+    document.getElementById('imageModal').addEventListener('click', function(event) {
+        if (event.target === this || event.target.classList.contains('modal-body')) {
+            imageModal.hide();
+        }
+    });
 
     // Attach click handlers to all document images
     document.querySelectorAll('.image-container img').forEach(img => {
         img.addEventListener('click', function() {
             expandImage(this);
+        });
+    });
+
+    // Attach clear button functionality to each clear button in the correction textarea
+    document.querySelectorAll('.clear-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const container = this.closest('.col-md-6');
+            const textarea = container.querySelector('.correction-textarea');
+            if (textarea) {
+                textarea.value = '';
+                console.log("Cleared correction textarea");
+            }
         });
     });
 
@@ -431,22 +510,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = this.closest('.col-md-6');
             const textarea = container.querySelector('textarea');
             const status = this.getAttribute('data-status');
-            const initialValue = textarea.dataset.initialValue || textarea.value;
-            const initialStatus = this.dataset.initialStatus || status;
             
-            // Check if there are actual changes
-            const hasTextChanged = textarea.value !== initialValue;
-            const hasStatusChanged = status !== initialStatus;
-            
-            if (!hasTextChanged && !hasStatusChanged) {
-                console.log("No changes detected for image ID:", imageId);
-                return; // Do not save or show toast if no changes
+            // If corrected text is empty, populate with predefined text
+            let correctedText = textarea.value;
+            if (!correctedText.trim()) {
+                correctedText = "No correction provided.";
+                textarea.value = correctedText;
             }
             
             const data = {
                 image_id: imageId,
                 ocr_result_id: ocrResultId,
-                corrected_text: textarea.value,
+                corrected_text: correctedText,
                 status: status
             };
 
@@ -467,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     // Update initial values after successful save
-                    textarea.dataset.initialValue = textarea.value;
+                    textarea.dataset.initialValue = correctedText;
                     this.dataset.initialStatus = status;
                     // Update border color based on new status
                     container.className = container.className.replace(/border-(success|danger|secondary)/, '');
@@ -478,8 +553,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         container.classList.add('border-secondary');
                     }
+                    // Update counts and progress bar at the top (though page will refresh)
+                    updateCountsAndProgress(status, this.dataset.initialStatus);
                     const toast = new bootstrap.Toast(document.getElementById('saveToast'));
                     toast.show();
+                    // Refresh the page to ensure all updates are reflected
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500); // Small delay to allow toast to show briefly
                 } else {
                     alert('Error: ' + (data.error || 'Unknown error'));
                 }
@@ -495,6 +576,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Function to update counts and progress bar at the top
+function updateCountsAndProgress(newStatus, oldStatus) {
+    // Get count elements by ID for reliable selection
+    const approvedCountElement = document.getElementById('approvedCount');
+    const rejectedCountElement = document.getElementById('rejectedCount');
+    const pendingCountElement = document.getElementById('pendingCount');
+    const progressBar = document.getElementById('progressBar');
+    const totalCountElement = document.getElementById('totalCount');
+    const totalCount = parseInt(totalCountElement.textContent.split(': ')[1]);
+
+    // Parse current counts
+    let approvedCount = parseInt(approvedCountElement.textContent);
+    let rejectedCount = parseInt(rejectedCountElement.textContent);
+    let pendingCount = parseInt(pendingCountElement.textContent);
+
+    // Adjust counts based on status change
+    if (oldStatus === 'approved') approvedCount--;
+    else if (oldStatus === 'rejected') rejectedCount--;
+    else if (oldStatus === 'pending') pendingCount--;
+
+    if (newStatus === 'approved') approvedCount++;
+    else if (newStatus === 'rejected') rejectedCount++;
+    else if (newStatus === 'pending') pendingCount++;
+
+    // Update text content of count elements
+    approvedCountElement.textContent = `${approvedCount} Approved`;
+    rejectedCountElement.textContent = `${rejectedCount} Rejected`;
+    pendingCountElement.textContent = `${pendingCount} Pending`;
+
+    // Update progress bar
+    const completedCount = approvedCount + rejectedCount;
+    const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+    progressBar.style.width = `${progressPercentage}%`;
+    progressBar.setAttribute('style', `width: ${progressPercentage}% !important;`); // Force style update
+    progressBar.offsetHeight; // Trigger reflow to ensure UI update
+
+    // Update badge at the top
+    const badge = document.querySelector('.badge.bg-success, .badge.bg-warning');
+    badge.textContent = `${progressPercentage.toFixed(1)}% Complete`;
+    if (progressPercentage >= 100) {
+        badge.classList.remove('bg-warning');
+        badge.classList.add('bg-success');
+    } else {
+        badge.classList.remove('bg-success');
+        badge.classList.add('bg-warning');
+    }
+
+    // Additional force update to ensure visibility
+    setTimeout(() => {
+        progressBar.style.width = `${progressPercentage}%`;
+        progressBar.setAttribute('style', `width: ${progressPercentage}% !important;`); // Force style update again
+    }, 0);
+}
 </script>
 
 <!-- Toast Notification -->

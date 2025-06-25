@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Study: {{ study.name }}</h1>
+    <div class="mb-3">
+        <a href="{{ url_for('admin.studies') }}" class="btn btn-secondary">Back to Studies</a>
+    </div>
+    
+    <!-- Action Cards for Better Organization -->
+    <style>
+    .action-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .action-card .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 15px;
+    }
+    .action-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .action-item .btn {
+        margin-right: 10px;
+        min-width: 40px;
+    }
+    .action-item span {
+        font-size: 0.9em;
+        line-height: 1.2;
+    }
+</style>
+<div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card action-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">OCR Processing</h5>
+                </div>
+                <div class="card-body">
+                    <div class="action-item">
+                        <form method="POST">
+                            <button type="submit" name="action" value="trigger_ocr_unprocessed" 
+                                    class="btn btn-success btn-sm" 
+                                    title="Process images without OCR results">
+                                <i class="fas fa-bolt"></i>
+                            </button>
+                        </form>
+                        <span>OCR Unprocessed Images</span>
+                    </div>
+                    <div class="action-item">
+                        <form action="{{ url_for('admin.manage_study', study_id=study.id) }}" method="POST">
+                            <input type="hidden" name="action" value="trigger_ocr_all_images">
+                            <button type="submit" class="btn btn-primary btn-sm" id="processAllImagesButton"
+                                    title="Process all images regardless of status">
+                                <i class="fas fa-sync"></i>
+                            </button>
+                        </form>
+                        <span>OCR All Images</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Image Management Card -->
+        <div class="col-md-4 mb-3">
+            <div class="card action-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Image Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="action-item">
+                        <form action="{{ url_for('admin.reload_images_for_study', study_id=study.id) }}" method="POST">
+                            <button type="submit" class="btn btn-warning btn-sm" 
+                                    onclick="return confirm('Are you sure you want to refresh the image list?');"
+                                    title="Reload images from the static directory for this study">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                        </form>
+                        <span>Refresh Image List</span>
+                    </div>
+                    <div class="action-item">
+                        <a href="{{ url_for('admin.upload_images', study_id=study.id) }}" 
+                           class="btn btn-info btn-sm"
+                           title="Upload additional images to this study">
+                            <i class="fas fa-upload"></i>
+                        </a>
+                        <span>Add New Images</span>
+                    </div>
+                    <div class="action-item">
+                        <form action="{{ url_for('admin.sync_images_from_remote', study_id=study.id) }}" method="POST">
+                            <button type="submit" class="btn btn-primary btn-sm" 
+                                    onclick="return confirm('Are you sure you want to sync images from the remote server?');"
+                                    title="Sync images from remote server for this study">
+                                <i class="fas fa-cloud-download-alt"></i>
+                            </button>
+                        </form>
+                        <span>Sync Images from Remote</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Study Management Card -->
+        <div class="col-md-4 mb-3">
+            <div class="card action-card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Study Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="action-item">
+                        <form action="{{ url_for('admin.delete_study', study_id=study.id) }}" method="POST">
+                            <button type="submit" class="btn btn-danger btn-sm" 
+                                    onclick="return confirm('Are you sure you want to remove this study?');"
+                                    title="Delete this study and all associated data">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                        <span>Remove Study</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Table with Bulk Actions -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Study Images</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3 btn-group" role="group">
+                    <button type="submit" name="action" value="trigger_ocr_selected" 
+                            class="btn btn-primary">
+                        <i class="fas fa-bolt"></i> OCR Selected
+                    </button>
+                    <button type="submit" name="action" value="delete" 
+                            class="btn btn-danger" 
+                            onclick="return confirm('Delete selected images?');">
+                        <i class="fas fa-trash"></i> Delete Selected
+                    </button>
+                </div>
+                
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll" onclick="toggleCheckboxes(this)"></th>
+                            <th>#</th>
+                            <th>Filename</th>
+                            <th>OCR Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for image in images %}
+                        <tr>
+                            <td><input type="checkbox" name="image_ids[]" value="{{ image.id }}"></td>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ image.filename }}</td>
+                            <td>
+                                <span class="badge badge-{{ 'success' if image.ocr_status == 'processed' else 'warning' }}" style="color: black;">
+                                    {{ image.ocr_status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center">No images found for this study.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+    
+    <a href="{{ url_for('admin.studies') }}" class="btn btn-secondary mt-3">Back to Studies</a>
+</div>
+
+<script>
+function toggleCheckboxes(source) {
+    checkboxes = document.getElementsByName('image_ids[]');
+    for(var i=0, n=checkboxes.length; i<n; i++) {
+        checkboxes[i].checked = source.checked;
+    }
+}
+
+function showLoadingOverlay(studyName, actionType) {
+    const overlay = document.getElementById('loadingOverlay');
+    const message = document.getElementById('processingMessage');
+    message.textContent = `OCR processing started for study ${studyName || 'Unknown'}.`;
+    let shouldShowOverlay = false;
+    
+    if (actionType === 'trigger_ocr_unprocessed') {
+        // For 'Process Unprocessed', check if there are unprocessed images
+        document.querySelectorAll('.badge.badge-warning').forEach(badge => {
+            if (badge.textContent.trim().toLowerCase() === 'not processed') {
+                shouldShowOverlay = true;
+            }
+        });
+    } else if (actionType === 'trigger_ocr_selected') {
+        // For 'OCR Selected', check if any images are selected
+        shouldShowOverlay = document.querySelectorAll('input[name="image_ids[]"]:checked').length > 0;
+    } else {
+        // For 'Process All Images', check if there are any images in the study
+        shouldShowOverlay = document.querySelectorAll('input[name="image_ids[]"]').length > 0;
+    }
+    
+    if (shouldShowOverlay) {
+        overlay.style.display = 'flex';
+        // Do not set localStorage to prevent persistence across page loads
+        // Simulate OCR completion with a longer timeout since real-time detection isn't available
+        setTimeout(() => {
+            hideLoadingOverlayWithStats();
+        }, 30000); // Longer timeout to simulate processing completion
+    } else {
+        console.log(`Skipping overlay display for ${actionType}: No relevant images to process.`);
+    }
+}
+
+function hideLoadingOverlayWithStats() {
+    const overlay = document.getElementById('loadingOverlay');
+    const message = document.getElementById('processingMessage');
+    const studyName = '{{ study.name }}' || 'Unknown';
+    // Display end message with placeholder stats since real-time stats fetching isn't implemented
+    message.textContent = `OCR processing ended for study ${studyName}. Stats: Total and Successful counts unavailable (requires server-side integration).`;
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 3000); // Show end message for 3 seconds before hiding
+}
+
+// Check if OCR processing was active on page load, but only show overlay if recently triggered
+document.addEventListener('DOMContentLoaded', function() {
+    // Clear the processing active flag on page load to prevent stale state from showing overlay
+    localStorage.removeItem('ocrProcessingActive');
+    localStorage.removeItem('ocrStudyName');
+});
+
+// Attach event listeners to OCR processing buttons to show loading overlay
+document.addEventListener('DOMContentLoaded', function() {
+    const unprocessedButton = document.querySelector('button[name="action"][value="trigger_ocr_unprocessed"]');
+    if (unprocessedButton) {
+        unprocessedButton.addEventListener('click', function(event) {
+            console.log("Process Unprocessed button clicked, showing loading overlay if applicable");
+            showLoadingOverlay('{{ study.name }}', 'trigger_ocr_unprocessed');
+        });
+    }
+    const selectedButton = document.querySelector('button[name="action"][value="trigger_ocr_selected"]');
+    if (selectedButton) {
+        selectedButton.addEventListener('click', function(event) {
+            console.log("OCR Selected button clicked, showing loading overlay if applicable");
+            showLoadingOverlay('{{ study.name }}', 'trigger_ocr_selected');
+        });
+    }
+    const allImagesButton = document.querySelector('#processAllImagesButton');
+    if (allImagesButton) {
+        allImagesButton.addEventListener('click', function(event) {
+            console.log("Process All Images button clicked, showing loading overlay");
+            showLoadingOverlay('{{ study.name }}', 'trigger_ocr_all');
+        });
+    }
+});
+</script>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+    <div class="spinner-border text-light" style="width: 3rem; height: 3rem;" role="status">
+        <span class="sr-only">Loading...</span>
+    </div>
+    <div id="processingMessage" class="text-light mt-2">Processing OCR...</div>
+</div>
+{% endblock %}

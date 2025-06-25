@@ -7,3 +7,6 @@ static/images/
 
 # Database
 *.sqlite3
+
+# migrations
+migrations/

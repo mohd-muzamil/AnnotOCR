@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Manage Studies</h1>
+    <a href="{{ url_for('admin.create_study') }}" class="btn btn-primary mb-3">Create New Study</a>
+    <form action="{{ url_for('admin.sync_all_images_from_remote') }}" method="POST" style="display: inline;">
+        <button type="submit" class="btn btn-primary mb-3" 
+                onclick="return confirm('Are you sure you want to sync images from the remote server for all studies?');">
+            Sync Images from Remote (All Studies)
+        </button>
+    </form>
+    <!-- Removed duplicate flashed messages block as it is already handled in base.html -->
+    <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Total Images</th>
+                    <th>With OCR</th>
+                    <th>With Correction</th>
+                    <th>Status Counts</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in study_stats %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ stat.study.name }}</td>
+                    <td>{{ stat.study.description }}</td>
+                    <td>{{ stat.total_images }}</td>
+                    <td>{{ stat.images_with_ocr }}</td>
+                    <td>{{ stat.images_with_correction }}</td>
+                    <td>
+                        {% for status, count in stat.status_counts.items() %}
+                            {{ status }}: {{ count }}<br>
+                        {% endfor %}
+                        {% if not stat.status_counts %}
+                            No status data
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.manage_study', study_id=stat.study.id) }}" class="btn btn-sm btn-info">Manage</a>
+                        {% if current_user.role == 'admin' %}
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal" onclick="setExportData('{{ stat.study.id }}', '{{ stat.study.name }}')">Export</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">No studies found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+    </table>
+</div>
+
+<!-- Export Confirmation Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" role="dialog" aria-labelledby="exportModalLabel" aria-hidden="true" style="z-index: 2000;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content" style="background-color: white; color: black; border: 1px solid #000;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportModalLabel">Confirm Export</h5>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to export data for the study: <strong id="studyName"></strong>?</p>
+                <p class="text-muted">Note: This action will export all OCR text and corrected text with status associated with this study. Images are not included in the export.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <a id="confirmExport" href="#" class="btn btn-primary" onclick="closeModal()">OK</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setExportData(studyId, studyName) {
+    document.getElementById('studyName').textContent = studyName;
+    document.getElementById('confirmExport').href = `/annotation/export_study/` + studyId;
+    // Show the modal manually if needed
+    var modal = document.getElementById('exportModal');
+    modal.classList.add('show');
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    // Add backdrop manually
+    var backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop fade show';
+    backdrop.id = 'modalBackdrop';
+    backdrop.onclick = closeModal;
+    document.body.appendChild(backdrop);
+}
+
+function closeModal() {
+    var modal = document.getElementById('exportModal');
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    // Remove backdrop
+    var backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+        backdrop.remove();
+    }
+}
+
+</script>
+
+{% endblock %}
