@@ -7,7 +7,6 @@ class OCRResults(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     image_id = db.Column(db.Integer, db.ForeignKey('images.id'), nullable=False, unique=True)
     text = db.Column(db.Text, nullable=False)
-    confidence = db.Column(db.Float)
     language = db.Column(db.String(10), default='eng')
     version = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -9,7 +9,7 @@ class Studies(db.Model):
 
     reviewers = db.relationship('Users', secondary='user_studies', back_populates='studies')
     participants = db.relationship('Participants', back_populates='study')
-    images = db.relationship('Images', back_populates='study')
+    images = db.relationship('Images', back_populates='study', cascade="all, delete-orphan")
 
     @property
     def image_count(self):
@@ -18,6 +18,10 @@ class Studies(db.Model):
     @property
     def approved_count(self):
         return sum(1 for img in self.images if img.status == 'approved')
+
+    @property
+    def rejected_count(self):
+        return sum(1 for img in self.images if img.status == 'rejected')
 
     def __repr__(self):
         return f"<Studies {self.name}>"

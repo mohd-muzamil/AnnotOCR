@@ -25,7 +25,47 @@ class OCRProcessor:
     def __init__(self):
         self.tesseract_version = self._get_tesseract_version()
         self.batch_size = 100  # Optimal batch size for database commits
+        # Don't detect Celery worker context at initialization - do it at runtime
         self.num_processes = cpu_count() or 4
+        logger.info(f"OCR Processor: Initialized with {self.num_processes} potential processes")
+    
+    def _detect_celery_worker(self):
+        """Detect if we're running inside a Celery worker"""
+        import os
+        import multiprocessing
+        
+        current_process = multiprocessing.current_process()
+        process_name = current_process.name
+        process_type = str(type(current_process))
+        
+        # Debug logging to understand the process context
+        logger.info(f"OCR Processor Debug - Process name: {process_name}")
+        logger.info(f"OCR Processor Debug - Process type: {process_type}")
+        logger.info(f"OCR Processor Debug - Process daemon: {getattr(current_process, 'daemon', 'N/A')}")
+        logger.info(f"OCR Processor Debug - Environment CELERY_WORKER: {'CELERY_WORKER' in os.environ}")
+        
+        # Check multiple indicators of Celery worker context
+        indicators = [
+            # Check if current process is a daemon (Celery workers are daemon processes)
+            hasattr(current_process, 'daemon') and current_process.daemon,
+            # Check for Celery environment variables
+            'CELERY_WORKER' in os.environ,
+            # Check process name contains celery or worker indicators
+            'celery' in process_name.lower(),
+            'worker' in process_name.lower(),
+            'forkpoolworker' in process_name.lower(),
+            # Check if we're in a ForkPoolWorker or similar
+            'ForkPoolWorker' in process_type,
+            'PoolWorker' in process_type,
+            # Check for billiard (Celery's multiprocessing library)
+            'billiard' in process_type.lower()
+        ]
+        
+        is_celery = any(indicators)
+        logger.info(f"OCR Processor Debug - Celery worker detected: {is_celery}")
+        logger.info(f"OCR Processor Debug - Indicators: {[i for i, ind in enumerate(indicators) if ind]}")
+        
+        return is_celery
 
     @staticmethod
     def _get_tesseract_version():
@@ -122,25 +162,23 @@ class OCRProcessor:
             if existing_result:
                 # Update existing record
                 existing_result.text = text
-                existing_result.confidence = confidence
                 existing_result.language = 'eng'
                 existing_result.version = self.tesseract_version
                 existing_result.created_at = datetime.utcnow()
                 updated_count += 1
-                logger.info(f"Updated OCR results for image ID {image_id}.")
+                logger.info(f"Updated OCR results for image ID {image_id} (confidence: {confidence:.2f}).")
             else:
                 # Create new record
                 new_result = OCRResults(
                     image_id=image_id,
                     text=text,
-                    confidence=confidence,
                     language='eng',
                     version=self.tesseract_version,
                     created_at=datetime.utcnow()
                 )
                 db.session.add(new_result)
                 new_count += 1
-                logger.info(f"Created new OCR results for image ID {image_id}.")
+                logger.info(f"Created new OCR results for image ID {image_id} (confidence: {confidence:.2f}).")
 
         try:
             db.session.commit()
@@ -182,41 +220,34 @@ class OCRProcessor:
 
             logger.info(f"Processing {total_images} images with {self.num_processes} workers" + (f" (limited to {limit_per_study} participants per study)" if limit_per_study > 0 else "") + (f" for specific IDs: {specific_ids}" if specific_ids else ""))
 
-            # Process images in parallel, ensuring session context for each image
+            # Process images - use single-threaded in Celery workers, multiprocessing otherwise
             results = []
             processed_count = 0
             image_ids = [img.id for img in images]  # Extract IDs to avoid passing full objects to pool
-            try:
-                with Pool(processes=self.num_processes) as pool:
-                    for i, result in enumerate(pool.imap_unordered(self._process_single_image_by_id, image_ids), 1):
-                        image_id, text, confidence = result
-                        
-                        if confidence is not None:
-                            results.append((image_id, text, confidence))
-                            processed_count += 1
-                        
-                        # Save in batches
-                        if i % self.batch_size == 0:
-                            saved = self._save_results_batch(results)
-                            results = []
-                            logger.info(f"Processed {i}/{total_images} images ({saved} saved in batch)")
-
-                        # Log progress periodically
-                        if i % 10 == 0 or i == total_images:
-                            logger.info(f"Progress: {i}/{total_images} ({processed_count} successful)")
-            except BrokenPipeError as e:
-                logger.error(f"BrokenPipeError during processing: {e}. Attempting to continue with remaining images.")
-                # Fallback to single-threaded processing for remaining images if possible
-                for image_id in image_ids[len(results):]:
+            
+            # Check for Celery worker context at runtime
+            is_celery_worker = self._detect_celery_worker()
+            
+            if is_celery_worker or self.num_processes == 1:
+                # Single-threaded processing for Celery workers
+                logger.info("Using single-threaded processing (Celery worker context detected at runtime)")
+                for i, image_id in enumerate(image_ids, 1):
                     result = self._process_single_image_by_id(image_id)
                     image_id, text, confidence = result
+                    
                     if confidence is not None:
                         results.append((image_id, text, confidence))
                         processed_count += 1
-                    if len(results) >= self.batch_size:
+                    
+                    # Save in batches
+                    if i % self.batch_size == 0:
                         saved = self._save_results_batch(results)
                         results = []
-                        logger.info(f"Processed additional images in fallback mode ({saved} saved in batch)")
+                        logger.info(f"Processed {i}/{total_images} images ({saved} saved in batch)")
+
+                    # Log progress periodically
+                    if i % 10 == 0 or i == total_images:
+                        logger.info(f"Progress: {i}/{total_images} ({processed_count} successful)")
 
             # Save any remaining results
             if results:
@@ -270,40 +301,76 @@ class OCRProcessor:
             processed_count = 0
             image_ids = [img.id for img in images]
             
-            # Use smaller batches to avoid pipe issues
-            batch_size = min(20, len(image_ids))  # Reduced batch size to mitigate resource issues
+            # Check for Celery worker context at runtime
+            is_celery_worker = self._detect_celery_worker()
             
-            for i in range(0, len(image_ids), batch_size):
-                batch = image_ids[i:i + batch_size]
-                try:
-                    with Pool(processes=min(self.num_processes, batch_size)) as pool:
-                        for result in pool.imap_unordered(self._process_single_image_by_id, batch):
+            if is_celery_worker or self.num_processes == 1:
+                # Single-threaded processing for Celery workers
+                logger.info(f"Using single-threaded processing for study ID {study_id} (Celery worker context detected at runtime)")
+                for i, image_id in enumerate(image_ids, 1):
+                    result = self._process_single_image_by_id(image_id)
+                    image_id, text, confidence = result
+                    
+                    if confidence is not None:
+                        results.append((image_id, text, confidence))
+                        processed_count += 1
+                    
+                    # Save in batches
+                    if i % self.batch_size == 0:
+                        saved = self._save_results_batch(results)
+                        results = []
+                        logger.info(f"Processed {i}/{total_images} images ({saved} saved in batch) for study ID {study_id}")
+                    
+                    # Log progress periodically
+                    if i % 10 == 0 or i == total_images:
+                        logger.info(f"Progress for study {study_id}: {i}/{total_images} ({processed_count} successful)")
+            else:
+                # Multiprocessing for non-Celery contexts
+                logger.info(f"Using multiprocessing for study ID {study_id} with {self.num_processes} workers")
+                
+                # Use smaller batches to avoid pipe issues
+                batch_size = min(20, len(image_ids))  # Reduced batch size to mitigate resource issues
+                
+                for i in range(0, len(image_ids), batch_size):
+                    batch = image_ids[i:i + batch_size]
+                    try:
+                        with Pool(processes=min(self.num_processes, batch_size)) as pool:
+                            for result in pool.imap_unordered(self._process_single_image_by_id, batch):
+                                image_id, text, confidence = result
+                                
+                                if confidence is not None:
+                                    results.append((image_id, text, confidence))
+                                    processed_count += 1
+                                
+                                # Save in batches
+                                if len(results) >= self.batch_size:
+                                    saved = self._save_results_batch(results)
+                                    results = []
+                                    logger.info(f"Processed {min(i + len(batch), total_images)}/{total_images} images ({saved} saved in batch) for study ID {study_id}")
+                    except BrokenPipeError as e:
+                        logger.error(f"BrokenPipeError processing batch starting at {i}: {e}. Falling back to single-threaded processing for this batch.")
+                        for image_id in batch:
+                            result = self._process_single_image_by_id(image_id)
                             image_id, text, confidence = result
-                            
                             if confidence is not None:
                                 results.append((image_id, text, confidence))
                                 processed_count += 1
-                            
-                            # Save in batches
                             if len(results) >= self.batch_size:
                                 saved = self._save_results_batch(results)
                                 results = []
-                                logger.info(f"Processed {min(i + len(batch), total_images)}/{total_images} images ({saved} saved in batch) for study ID {study_id}")
-                except BrokenPipeError as e:
-                    logger.error(f"BrokenPipeError processing batch starting at {i}: {e}. Falling back to single-threaded processing for this batch.")
-                    for image_id in batch:
-                        result = self._process_single_image_by_id(image_id)
-                        image_id, text, confidence = result
-                        if confidence is not None:
-                            results.append((image_id, text, confidence))
-                            processed_count += 1
-                        if len(results) >= self.batch_size:
-                            saved = self._save_results_batch(results)
-                            results = []
-                            logger.info(f"Processed additional images in fallback mode ({saved} saved in batch) for study ID {study_id}")
-                except Exception as e:
-                    logger.error(f"Error processing batch starting at {i}: {e}")
-                    continue
+                                logger.info(f"Processed additional images in fallback mode ({saved} saved in batch) for study ID {study_id}")
+                    except Exception as e:
+                        logger.error(f"Multiprocessing failed for batch starting at {i}: {e}. Falling back to single-threaded processing for this batch.")
+                        for image_id in batch:
+                            result = self._process_single_image_by_id(image_id)
+                            image_id, text, confidence = result
+                            if confidence is not None:
+                                results.append((image_id, text, confidence))
+                                processed_count += 1
+                            if len(results) >= self.batch_size:
+                                saved = self._save_results_batch(results)
+                                results = []
+                                logger.info(f"Processed additional images in fallback mode ({saved} saved in batch) for study ID {study_id}")
             
             # Save any remaining results
             if results:
@@ -332,8 +399,15 @@ class OCRProcessor:
                 return []
 
             results = []
-            with Pool(processes=self.num_processes) as pool:
-                for result in pool.imap_unordered(self._process_single_image, images):
+        
+            # Check for Celery worker context at runtime
+            is_celery_worker = self._detect_celery_worker()
+        
+            if is_celery_worker or self.num_processes == 1:
+                # Single-threaded processing for Celery workers
+                logger.info(f"Using single-threaded processing for OCR extraction (Celery worker context detected at runtime)")
+                for image in images:
+                    result = self._process_single_image(image)
                     image_id, text, confidence = result
                     if confidence is not None:
                         results.append({
@@ -348,6 +422,45 @@ class OCRProcessor:
                             'error': text,  # In this case, 'text' contains the error message
                             'status': 'failed'
                         })
+            else:
+                # Multiprocessing for non-Celery contexts
+                logger.info(f"Using multiprocessing for OCR extraction with {self.num_processes} workers")
+                try:
+                    with Pool(processes=self.num_processes) as pool:
+                        for result in pool.imap_unordered(self._process_single_image, images):
+                            image_id, text, confidence = result
+                            if confidence is not None:
+                                results.append({
+                                    'image_id': image_id,
+                                    'text': text,
+                                    'confidence': confidence,
+                                    'status': 'success'
+                                })
+                            else:
+                                results.append({
+                                    'image_id': image_id,
+                                    'error': text,  # In this case, 'text' contains the error message
+                                    'status': 'failed'
+                                })
+                except Exception as e:
+                    logger.error(f"Multiprocessing failed in extract_ocr_for_images: {e}. Falling back to single-threaded processing.")
+                    # Fallback to single-threaded processing
+                    for image in images:
+                        result = self._process_single_image(image)
+                        image_id, text, confidence = result
+                        if confidence is not None:
+                            results.append({
+                                'image_id': image_id,
+                                'text': text,
+                                'confidence': confidence,
+                                'status': 'success'
+                            })
+                        else:
+                            results.append({
+                                'image_id': image_id,
+                                'error': text,  # In this case, 'text' contains the error message
+                                'status': 'failed'
+                            })
 
             logger.info(f"OCR extraction complete for {len(image_ids)} images")
             return results

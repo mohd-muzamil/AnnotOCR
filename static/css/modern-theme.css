@@ -1,0 +1,336 @@
+/* AnnotOCR Academic Professional Theme for AnnotOCR */
+
+/* Base Layout */
+.container {
+    max-width: 1200px;
+}
+
+/* Page Headers */
+.page-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    position: relative;
+    padding-bottom: 1rem;
+    font-family: 'Georgia', 'Times New Roman', serif;
+}
+.page-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 80px;
+    height: 3px;
+    background: #34495e;
+    border-radius: 1px;
+}
+
+/* Button Enhancements - Academic Style */
+.btn {
+    border-radius: 4px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border: 1px solid;
+    margin-right: 10px;
+    font-family: inherit;
+}
+
+/* Button Color Variations - Muted Academic Colors */
+.btn-primary {
+    background-color: #2c3e50;
+    border-color: #2c3e50;
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #34495e;
+    border-color: #34495e;
+}
+
+.btn-secondary {
+    background-color: #7f8c8d;
+    border-color: #7f8c8d;
+    color: white;
+}
+.btn-secondary:hover {
+    background-color: #95a5a6;
+    border-color: #95a5a6;
+}
+
+.btn-success {
+    background-color: #27ae60;
+    border-color: #27ae60;
+    color: white;
+}
+.btn-success:hover {
+    background-color: #2ecc71;
+    border-color: #2ecc71;
+}
+
+.btn-info {
+    background-color: #3498db;
+    border-color: #3498db;
+    color: white;
+}
+.btn-info:hover {
+    background-color: #5dade2;
+    border-color: #5dade2;
+}
+
+.btn-warning {
+    background-color: #f39c12;
+    border-color: #f39c12;
+    color: white;
+}
+.btn-warning:hover {
+    background-color: #e67e22;
+    border-color: #e67e22;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}
+
+/* Card Styling - Clean Academic Look */
+.card {
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    background: white;
+}
+
+.action-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Card Headers - Academic Style */
+.card-header {
+    border-radius: 6px 6px 0 0 !important;
+    border-bottom: 1px solid #bdc3c7;
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    background-color: #ecf0f1 !important;
+    color: #2c3e50 !important;
+    font-family: 'Georgia', 'Times New Roman', serif;
+}
+.card-header.bg-info {
+    background-color: #d6eaf8 !important;
+    color: #1b4f72 !important;
+}
+.card-header.bg-warning {
+    background-color: #fdeaa7 !important;
+    color: #7d6608 !important;
+}
+.card-header.bg-primary {
+    background-color: #d5dbdb !important;
+    color: #2c3e50 !important;
+}
+
+/* Action Items - Static Professional Style */
+.action-item {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.action-item:hover {
+    background-color: #e9ecef;
+    border-color: #ced4da;
+}
+
+/* Table Enhancements - Academic Style */
+.table {
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #bdc3c7;
+}
+.table thead th {
+    background-color: #34495e;
+    color: white;
+    border: none;
+    font-weight: 600;
+    padding: 1rem;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    font-family: inherit;
+}
+.table tbody tr {
+    border: none;
+}
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+.table tbody td {
+    padding: 1rem;
+    border: none;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+/* DataTables Enhancements */
+.dataTables_wrapper {
+    padding: 1rem;
+}
+.dataTables_filter input {
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+}
+.dataTables_length select {
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+    padding: 0.25rem 0.5rem;
+    margin: 0 0.5rem;
+}
+.dataTables_paginate .paginate_button {
+    border-radius: 4px !important;
+    margin: 0 2px;
+    padding: 0.5rem 1rem !important;
+    border: 1px solid #dee2e6 !important;
+    background: white !important;
+    color: #495057 !important;
+}
+.dataTables_paginate .paginate_button:hover {
+    background-color: #34495e !important;
+    color: white !important;
+    border-color: #34495e !important;
+}
+.dataTables_paginate .paginate_button.current {
+    background-color: #2c3e50 !important;
+    color: white !important;
+    border-color: #2c3e50 !important;
+}
+
+/* Modal Improvements */
+.modal-content {
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 6px 6px 0 0;
+    background-color: #ecf0f1;
+    color: #2c3e50;
+}
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 6px 6px;
+    background-color: #f8f9fa;
+}
+
+/* Stats Cards - Academic Style */
+.stats-overview, .study-stats {
+    background-color: #34495e;
+    color: white;
+    padding: 1.5rem;
+    border-radius: 6px;
+    margin-bottom: 2rem;
+    border: 1px solid #2c3e50;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: block;
+    font-family: 'Georgia', 'Times New Roman', serif;
+}
+.stat-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Image Grid */
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+.image-card {
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #bdc3c7;
+}
+.image-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.image-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+.image-card-body {
+    padding: 1rem;
+}
+
+/* Loading Overlay Enhancement */
+#loadingOverlay {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(3px);
+    border-radius: 6px;
+}
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+    color: #34495e;
+
+/* Navigation Enhancements */
+.navbar {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.navbar-brand {
+    font-weight: 700;
+    color: #2c3e50 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .action-card {
+        margin-bottom: 1rem;
+    }
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        margin-right: 0;
+    }
+    .image-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    .action-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .action-item span {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .table-responsive {
+        border-radius: 6px;
+    }
+}
+
+

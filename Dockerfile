@@ -47,6 +47,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     libjpeg62-turbo \
     libopenjp2-7 \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 # Create group and user with host UID/GID

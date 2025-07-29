@@ -22,6 +22,10 @@ def validate_corrected_text(text):
     """
     if not text:
         return False, "Corrected text cannot be empty."
+
+    # Allow the default rejection message to pass validation
+    if text.strip() == "Rejected: Text is illegible or not relevant.":
+        return True, ""
     
     lines = text.strip().split('\n')
     lines = [line.strip() for line in lines if line.strip()]  # Remove empty lines

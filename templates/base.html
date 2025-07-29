@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Screen Time Extractor{% block title %}{% endblock %}</title>
     <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='images/PROSIT.jpeg') }}">
     <!-- Bootstrap CSS -->
@@ -38,16 +39,6 @@
         }
         .breadcrumb-item a:hover {
             text-decoration: underline;
-        }
-        .studies-navbar {
-            background-color: #ffffff !important;
-            border-bottom: 1px solid #dddfe2;
-        }
-        .studies-navbar .nav-link {
-            color: #1c1e21;
-        }
-        .studies-navbar .nav-link:hover {
-            color: #1877f2;
         }
         .dropdown-menu {
             border: 1px solid #dddfe2;
@@ -142,34 +133,8 @@
             </div>
         </nav>
 
-        <!-- Studies Navigation - Horizontal -->
-        {% if current_user.is_authenticated and all_studies %}
-        <nav class="navbar navbar-expand navbar-dark bg-dark studies-navbar">
-            <div class="container-fluid">
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="studiesDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-collection me-1"></i> Studies
-                        </a>
-                        <ul class="dropdown-menu">
-                            {% for study in all_studies %}
-                            <li>
-                                <a class="dropdown-item {% if request.endpoint == 'dashboard.study' and study.id == current_study.id %}active{% endif %}" 
-                                   href="{{ url_for('dashboard.study', study_name=study.name) }}">
-                                    <i class="bi bi-folder me-2"></i>
-                                    {{ study.name }}
-                                </a>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-        {% endif %}
-
     <!-- Main Content Area -->
-    <main class="container-fluid py-4 main-content">
+    <main class="container-fluid py-0 main-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}

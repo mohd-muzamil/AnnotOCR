@@ -8,4 +8,5 @@ mkdir -p /app/static/data
 # Directories are created with default permissions
 
 # Start Gunicorn without specifying user due to user 1017 not existing
-exec gunicorn --bind 0.0.0.0:5000 "wsgi:app"
+# Set timeout to 120 seconds to allow more time for OCR processing
+exec gunicorn --bind 0.0.0.0:5000 --timeout 120 "wsgi:app"

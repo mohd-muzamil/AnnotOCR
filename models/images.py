@@ -13,8 +13,16 @@ class Images(db.Model):
 
     study = db.relationship('Studies', back_populates='images')
     participant = db.relationship('Participants', back_populates='images')
-    ocr_results = db.relationship('OCRResults', back_populates='image')
-    corrections = db.relationship('Corrections', back_populates='image')
+    ocr_results = db.relationship('OCRResults', back_populates='image', cascade="all, delete-orphan")
+    corrections = db.relationship('Corrections', back_populates='image', cascade="all, delete-orphan")
 
+    @property
+    def ocr_status(self):
+        """Determine OCR status based on whether OCR results exist"""
+        if self.ocr_results:
+            return 'processed'
+        else:
+            return 'unprocessed'
+    
     def __repr__(self):
         return f"<Images {self.filename}>"

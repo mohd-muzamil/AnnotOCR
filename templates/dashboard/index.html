@@ -22,7 +22,7 @@
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Total Studies</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ all_studies|length }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ studies_data|length }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="bi bi-collection fs-1 text-gray-300"></i>
@@ -68,30 +68,46 @@
             </div>
         </div>
 
-        <!-- Completion Rate -->
+                <!-- Overall Progress Card -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Overall Completion</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ completion_rate }}%</div>
-                            <div class="progress mt-2" style="height: 8px;">
-                                <div class="progress-bar bg-warning" role="progressbar" 
-                                     style="width: {{ completion_rate }}%" 
-                                     aria-valuenow="{{ completion_rate }}" 
-                                     aria-valuemin="0" 
-                                     aria-valuemax="100"></div>
-                            </div>
+                                Overall Progress</div>
+                            {% set completion_percent = (total_approved + total_rejected) / total_images * 100 if total_images > 0 else 0 %}
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ '%.1f'|format(completion_percent) }}%</div>
                         </div>
                         <div class="col-auto">
-                            <i class="bi bi-check-circle fs-1 text-gray-300"></i>
+                            <i class="bi bi-check2-circle fs-1 text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Progress Details Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h6 class="mb-2 font-weight-bold text-primary">Image Review Status</h6>
+                    <div class="progress progress-sm mb-2" style="height: 10px;">
+                        <div class="progress-bar bg-info" role="progressbar" data-completion="{{ completion_percent }}" aria-valuenow="{{ completion_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-success"><strong>Approved:</strong> {{ total_approved }}</span>
+                        <span class="text-danger"><strong>Rejected:</strong> {{ total_rejected }}</span>
+                        <span class="text-warning"><strong>Pending:</strong> {{ total_pending }}</span>
+                        <span class="text-muted"><strong>Total:</strong> {{ total_images }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
     <!-- Studies Table -->
@@ -108,35 +124,39 @@
                             <th>Participants</th>
                             <th>Images</th>
                             <th>Approved</th>
+                            <th>Rejected</th>
+                            <th>Pending</th>
                             <th>Progress</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for study in all_studies %}
+                        {% for item in studies_data %}
                         <tr>
                             <td>
-                                <a href="{{ url_for('dashboard.study', study_name=study.name) }}">
-                                    {{ study.name }}
+                                <a href="{{ url_for('dashboard.study', study_name=item.study.name) }}">
+                                    {{ item.study.name }}
                                 </a>
                             </td>
-                            <td>{{ study.participants|length }}</td>
-                            <td>{{ study.image_count }}</td>
-                            <td>{{ study.approved_count }}</td>
+                            <td>{{ item.study.participants|length }}</td>
+                            <td>{{ item.study.image_count }}</td>
+                            <td>{{ item.study.approved_count }}</td>
+                            <td>{{ item.study.rejected_count }}</td>
+                            <td>{{ item.pending_count }}</td>
                             <td>
                                 <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-success" 
+                                    <div class="progress-bar {{ 'bg-success' if item.completion_percent >= 100 else 'bg-info' }} {{ 'w-100' if item.completion_percent >= 100 }}" 
                                          role="progressbar" 
-                                         style="width: {{ study.completion_percentage }}%" 
-                                         aria-valuenow="{{ study.completion_percentage }}" 
+                                         data-completion="{{ item.completion_percent }}"
+                                         aria-valuenow="{{ item.completion_percent }}" 
                                          aria-valuemin="0" 
                                          aria-valuemax="100">
-                                        {{ study.completion_percentage }}%
+                                        {{ '%.1f'|format(item.completion_percent) }}%
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <a href="{{ url_for('dashboard.study', study_name=study.name) }}"
+                                <a href="{{ url_for('dashboard.study', study_name=item.study.name) }}"
                                    class="btn btn-sm btn-outline-primary" 
                                    title="View Study">
                                     <i class="bi bi-eye"></i>
@@ -166,6 +186,13 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         });
     }
+
+    // Set progress bar widths dynamically to avoid linter issues with inline styles
+    const progressBars = document.querySelectorAll('.progress-bar[data-completion]');
+    progressBars.forEach(bar => {
+        const completion = bar.getAttribute('data-completion');
+        bar.style.width = completion + '%';
+    });
 });
 </script>
 {% endblock %}

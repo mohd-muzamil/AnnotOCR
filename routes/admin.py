@@ -1,9 +1,10 @@
 # routes/admin.py
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, jsonify
 from flask_login import login_required, current_user
-from models import Users
-from models import Studies
+from models import Users, Studies, Images
+from flask import request
 from flask import abort
+from services.study_splitter import split_study_into_batches, merge_batch_studies_back, delete_batch_studies
 import logging
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ def studies():
                 {"study_id": study.id}
             )
             total_images = total_images_query.scalar() or 0
-            print(f"Study {study.name} - Total Images Query Result: {total_images}")
+            # print(f"Study {study.name} - Total Images Query Result: {total_images}")
 
             # Direct query for images with OCR
             images_with_ocr_query = db.session.execute(
@@ -222,7 +223,7 @@ def studies():
                 {"study_id": study.id}
             )
             images_with_ocr = images_with_ocr_query.scalar() or 0
-            print(f"Study {study.name} - Images with OCR Query Result: {images_with_ocr}")
+            # print(f"Study {study.name} - Images with OCR Query Result: {images_with_ocr}")
 
             # Direct query for images with corrections
             images_with_correction = 0
@@ -238,9 +239,10 @@ def studies():
                     {"study_id": study.id}
                 )
                 images_with_correction = images_with_correction_query.scalar() or 0
-                print(f"Study {study.name} - Images with Correction Query Result: {images_with_correction}")
+                # print(f"Study {study.name} - Images with Correction Query Result: {images_with_correction}")
             except Exception as e:
-                print(f"Could not query Corrections for study {study.name}: {str(e)}")
+                # print(f"Could not query Corrections for study {study.name}: {str(e)}")
+                pass
 
             # Direct query for status counts
             status_counts_query = db.session.execute(
@@ -254,7 +256,7 @@ def studies():
             )
             status_counts = status_counts_query.fetchall()
             status_dict = dict(status_counts) if status_counts else {}
-            print(f"Study {study.name} - Status Counts Query Result: {status_dict}")
+            # print(f"Study {study.name} - Status Counts Query Result: {status_dict}")
 
             study_stats.append({
                 'study': study,
@@ -264,7 +266,7 @@ def studies():
                 'status_counts': status_dict
             })
         except Exception as e:
-            print(f"Error processing stats for study {study.name}: {str(e)}")
+            # print(f"Error processing stats for study {study.name}: {str(e)}")
             study_stats.append({
                 'study': study,
                 'total_images': 0,
@@ -386,94 +388,175 @@ def delete_study(study_id):
 def manage_study(study_id):
     if current_user.role != 'admin':
         abort(403)
+
     study = Studies.query.get_or_404(study_id)
     from flask import request, flash, redirect, url_for
-    from models import Images, OCRResults
+    from models import Images, OCRResults, Corrections
     from app import db
+
     if request.method == 'POST':
+        # Handle JSON requests (AJAX OCR processing)
+        if request.is_json:
+            data = request.get_json()
+            action = data.get('action')
+            if action and 'trigger_ocr' in action:
+                image_ids = data.get('image_ids', [])
+                
+                # Import the OCR processing task
+                try:
+                    from services.tasks import process_ocr_task
+                except ImportError:
+                    logger.error("OCR task module not found")
+                    return jsonify({'success': False, 'message': 'OCR processing is not available'}), 500
+
+                try:
+                    if action == 'trigger_ocr_selected':
+                        if not image_ids:
+                            return jsonify({'success': False, 'message': 'No images selected for OCR.'}), 400
+                        process_ocr_task.delay(image_ids=image_ids)
+                        return jsonify({'success': True, 'message': f'OCR processing started for {len(image_ids)} selected images.'})
+
+                    elif action == 'trigger_ocr_all_images':
+                        all_image_ids = [image.id for image in study.images]
+                        if not all_image_ids:
+                            return jsonify({'success': False, 'message': 'No images in the study to process.'}), 400
+                        process_ocr_task.delay(study_id=study.id)
+                        return jsonify({'success': True, 'message': 'OCR processing started for all images in the study.'})
+
+                    elif action == 'trigger_ocr_unprocessed':
+                        # Find images without OCR results
+                        from models import OCRResults
+                        images_with_ocr_subquery = db.session.query(Images.id).join(OCRResults).filter(Images.study_id == study.id)
+                        unprocessed_images = Images.query.filter(
+                            Images.study_id == study.id,
+                            ~Images.id.in_(images_with_ocr_subquery)
+                        ).all()
+                        if not unprocessed_images:
+                            return jsonify({'success': True, 'message': 'No unprocessed images to OCR.'})
+                        unprocessed_image_ids = [image.id for image in unprocessed_images]
+                        process_ocr_task.delay(image_ids=unprocessed_image_ids)
+                        return jsonify({'success': True, 'message': f'OCR processing started for {len(unprocessed_image_ids)} unprocessed images.'})
+                        
+                except Exception as e:
+                    logger.error(f"Error triggering OCR action '{action}': {e}")
+                    return jsonify({'success': False, 'message': 'An internal error occurred while starting the task.'}), 500
+        
+        # Handle standard form requests
         action = request.form.get('action')
-        image_ids = request.form.getlist('image_ids[]')
-        
-        if action == 'delete':
-            if not image_ids:
-                flash('No images selected for deletion.', 'danger')
-            else:
-                try:
-                    images = Images.query.filter(Images.id.in_(image_ids), Images.study_id == study_id).all()
-                    for image in images:
-                        # Delete related OCRResults and Corrections records first to avoid integrity errors
-                        OCRResults.query.filter_by(image_id=image.id).delete()
-                        from models import Corrections
-                        Corrections.query.filter_by(image_id=image.id).delete()
-                        db.session.delete(image)
-                    db.session.commit()
-                    flash(f'Deleted {len(images)} images from study {study.name}.', 'success')
-                except Exception as e:
-                    db.session.rollback()
-                    flash(f'Error deleting images: {str(e)}', 'danger')
+        if action and 'trigger_ocr' in action:
+            image_ids = request.form.getlist('image_ids[]')
+
+            # Import the OCR processing task
+            try:
+                from services.tasks import process_ocr_task
+            except ImportError:
+                logger.error("OCR task module not found")
+                flash('OCR processing is not available', 'danger')
+                return redirect(url_for('admin.manage_study', study_id=study.id))
+
+            try:
+                if action == 'trigger_ocr_selected':
+                    if not image_ids:
+                        flash('No images selected for OCR.', 'warning')
+                        return redirect(url_for('admin.manage_study', study_id=study.id))
+                    process_ocr_task.delay(image_ids=image_ids)
+                    flash(f'OCR processing started for {len(image_ids)} selected images.', 'success')
+
+                elif action == 'trigger_ocr_all_images':
+                    all_image_ids = [image.id for image in study.images]
+                    if not all_image_ids:
+                        flash('No images in the study to process.', 'warning')
+                        return redirect(url_for('admin.manage_study', study_id=study.id))
+                    process_ocr_task.delay(study_id=study.id)
+                    flash('OCR processing started for all images in the study.', 'success')
+
+                elif action == 'trigger_ocr_unprocessed':
+                    # Find images without OCR results
+                    from models import OCRResults
+                    images_with_ocr_subquery = db.session.query(Images.id).join(OCRResults).filter(Images.study_id == study.id)
+                    unprocessed_images = Images.query.filter(
+                        Images.study_id == study.id,
+                        ~Images.id.in_(images_with_ocr_subquery)
+                    ).all()
+                    if not unprocessed_images:
+                        flash('No unprocessed images to OCR.', 'info')
+                        return redirect(url_for('admin.manage_study', study_id=study.id))
+                    unprocessed_image_ids = [image.id for image in unprocessed_images]
+                    process_ocr_task.delay(image_ids=unprocessed_image_ids)
+                    flash(f'OCR processing started for {len(unprocessed_image_ids)} unprocessed images.', 'success')
+            except Exception as e:
+                logger.error(f"Error triggering OCR action '{action}': {e}")
+                flash('An internal error occurred while starting the task.', 'danger')
             
-        elif action == 'trigger_ocr_unprocessed':
-            images = Images.query.filter_by(study_id=study_id).all()
-            unprocessed_images = [img for img in images if not img.ocr_results]
-            if not unprocessed_images:
-                flash('No unprocessed images found to trigger OCR.', 'info')
-            else:
-                from services.ocr_image_extractor import ocr_processor
-                try:
-                    processed_count = ocr_processor.process_images_for_study(study_id)
-                    if processed_count > 0:
-                        flash(f'Successfully processed {processed_count} images for study {study.name}.', 'success')
-                    else:
-                        flash('OCR processing completed but no new results were saved.', 'info')
-                except Exception as e:
-                    flash(f'Error during OCR processing: {str(e)}', 'danger')
-                    logger.exception(f'OCR processing failed for study {study_id}')
-            
-        elif action == 'trigger_ocr_selected':
+            return redirect(url_for('admin.manage_study', study_id=study.id))
+
+        # Handle standard synchronous form submissions
+        image_ids = request.form.getlist('image_ids')
+        if action == 'delete_selected':
             if not image_ids:
-                flash('No images selected for OCR processing.', 'danger')
+                flash('No images selected for deletion.', 'warning')
             else:
-                from services.ocr_image_extractor import ocr_processor
-                try:
-                    processed_count = ocr_processor.process_images(specific_ids=image_ids)
-                    if processed_count > 0:
-                        flash(f'Successfully processed {processed_count} selected images for study {study.name}.', 'success')
-                    else:
-                        flash('OCR processing completed for selected images but no new results were saved. Check logs for details or if images were already processed.', 'info')
-                        logger.info(f'No new OCR results saved for {len(image_ids)} selected images in study {study_id}. Possible reasons: already processed or processing errors.')
-                except Exception as e:
-                    flash(f'Error during OCR processing of selected images: {str(e)}', 'danger')
-                    logger.exception(f'OCR processing failed for selected images in study {study_id}: {str(e)}')
+                Images.query.filter(Images.id.in_(image_ids)).delete(synchronize_session=False)
+                db.session.commit()
+                flash(f'{len(image_ids)} images have been deleted.', 'success')
         
-        elif action == 'trigger_ocr_all_images':
-            images = Images.query.filter_by(study_id=study_id).all()
-            if not images:
-                flash('No images found to trigger OCR.', 'info')
-            else:
-                image_ids_all = [str(img.id) for img in images]
-                from services.ocr_image_extractor import ocr_processor
+        elif action == 'split_study':
+            batch_size = request.form.get('batch_size', type=int)
+            if batch_size and batch_size > 0:
                 try:
-                    processed_count = ocr_processor.process_images(specific_ids=image_ids_all)
-                    if processed_count > 0:
-                        flash(f'Successfully processed {processed_count} images for study {study.name}.', 'success')
+                    created_studies = split_study_into_batches(study.id, batch_size)
+                    if created_studies:
+                        flash(f'Study has been split into {len(created_studies)} batches of {batch_size} participants each.', 'success')
                     else:
-                        flash('OCR processing completed for all images but no new results were saved. Check logs for details.', 'info')
-                        logger.info(f'No new OCR results saved for all images in study {study_id}. Possible reasons: already processed or processing errors.')
+                        flash('No new studies were created (they may already exist).', 'info')
+                    return redirect(url_for('admin.studies'))
                 except Exception as e:
-                    flash(f'Error during OCR processing of all images: {str(e)}', 'danger')
-                    logger.exception(f'OCR processing failed for all images in study {study_id}: {str(e)}')
+                    logger.error(f"Error splitting study: {e}")
+                    db.session.rollback()  # Ensure session is rolled back on error
+                    flash(f'Error splitting study: {str(e)}', 'danger')
+            else:
+                flash('Invalid batch size.', 'danger')
+        
+        elif action == 'merge_batch_studies':
+            try:
+                merged_count, batch_count = merge_batch_studies_back(study.id)
+                flash(f'Successfully merged {merged_count} participants from {batch_count} batch studies back to the main study.', 'success')
+                return redirect(url_for('admin.manage_study', study_id=study.id))
+            except Exception as e:
+                logger.error(f"Error merging batch studies: {e}")
+                db.session.rollback()
+                flash(f'Error merging batch studies: {str(e)}', 'danger')
+        
+        elif action == 'delete_batch_studies':
+            try:
+                deleted_studies = delete_batch_studies(study.id)
+                if deleted_studies:
+                    flash(f'Successfully deleted {len(deleted_studies)} empty batch studies: {", ".join(deleted_studies)}', 'success')
+                else:
+                    flash('No empty batch studies found to delete.', 'info')
+                return redirect(url_for('admin.manage_study', study_id=study.id))
+            except Exception as e:
+                logger.error(f"Error deleting batch studies: {e}")
+                db.session.rollback()
+                flash(f'Error deleting batch studies: {str(e)}', 'danger')
+        
+        return redirect(url_for('admin.manage_study', study_id=study.id))
+
+    # GET request handling
+    page = request.args.get('page', 1, type=int)
+    image_search_query = request.args.get('image_search', '')
+    images_query = Images.query.filter_by(study_id=study.id)
+    if image_search_query:
+        images_query = images_query.filter(Images.filename.ilike(f'%{image_search_query}%'))
     
-    images = Images.query.filter_by(study_id=study_id).options(db.joinedload(Images.ocr_results)).all()
-    image_data = []
-    for img in images:
-        ocr_status = 'Processed' if img.ocr_results else 'Not Processed'
-        image_data.append({
-            'id': img.id,
-            'filename': img.filename,
-            'filepath': img.filepath,
-            'ocr_status': ocr_status
-        })
-    return render_template('admin/manage_studies.html', study=study, images=image_data)
+    images_pagination = images_query.order_by(Images.filename).paginate(
+        page=page, per_page=10, error_out=False
+    )
+
+    return render_template('admin/manage_studies.html',
+                           study=study,
+                           images_pagination=images_pagination,
+                           image_search_query=image_search_query)
 
 @admin_bp.route('/reload_images_from_static', methods=['POST'])
 @login_required

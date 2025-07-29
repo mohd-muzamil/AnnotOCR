@@ -54,3 +54,20 @@
 
 <!-- Removed modal for direct navigation to create user page -->
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    $('#usersTable').DataTable({
+        "responsive": true,
+        "paging": true,
+        "pageLength": 25,
+        "lengthMenu": [ [10, 25, 50, -1], [10, 25, 50, "All"] ],
+        "columnDefs": [
+            { "orderable": false, "targets": 4 } // Disable sorting on 'Actions' column
+        ]
+    });
+});
+</script>
+{% endblock %}

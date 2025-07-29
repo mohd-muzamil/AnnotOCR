@@ -3,15 +3,17 @@
 {% block content %}
 <div class="container mt-4">
     <h1>Manage Studies</h1>
-    <a href="{{ url_for('admin.create_study') }}" class="btn btn-primary mb-3">Create New Study</a>
+    <a href="{{ url_for('admin.create_study') }}" class="btn btn-primary mb-3">
+        <i class="fas fa-plus me-1"></i>Create New Study
+    </a>
     <form action="{{ url_for('admin.sync_all_images_from_remote') }}" method="POST" style="display: inline;">
         <button type="submit" class="btn btn-primary mb-3" 
                 onclick="return confirm('Are you sure you want to sync images from the remote server for all studies?');">
-            Sync Images from Remote (All Studies)
+            <i class="fas fa-cloud-download-alt me-1"></i>Sync Images from Remote (All Studies)
         </button>
     </form>
     <!-- Removed duplicate flashed messages block as it is already handled in base.html -->
-    <table class="table table-striped">
+    <table class="table table-striped" id="studiesTable">
             <thead>
                 <tr>
                     <th>#</th>
@@ -42,9 +44,13 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{{ url_for('admin.manage_study', study_id=stat.study.id) }}" class="btn btn-sm btn-info">Manage</a>
+                        <a href="{{ url_for('admin.manage_study', study_id=stat.study.id) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-cog me-1"></i>Manage
+                        </a>
                         {% if current_user.role == 'admin' %}
-                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal" onclick="setExportData('{{ stat.study.id }}', '{{ stat.study.name }}')">Export</button>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal" onclick="setExportData('{{ stat.study.id }}', '{{ stat.study.name }}')">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
                         {% endif %}
                     </td>
                 </tr>
@@ -69,14 +75,78 @@
                 <p class="text-muted">Note: This action will export all OCR text and corrected text with status associated with this study. Images are not included in the export.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
                 <a id="confirmExport" href="#" class="btn btn-primary" onclick="closeModal()">OK</a>
             </div>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
 <script>
+$(document).ready(function() {
+    $('#studiesTable').DataTable({
+        // Enable core features
+        "responsive": true,
+        "paging": true,
+        "searching": true,
+        "ordering": true,
+        "info": true,
+        "lengthChange": true,
+        
+        // Pagination settings
+        "pageLength": 25,
+        "lengthMenu": [ [10, 25, 50, 100, -1], [10, 25, 50, 100, "All"] ],
+        
+        // Default sorting: alphabetically by study name (column index 1)
+        "order": [[ 1, "asc" ]],
+        
+        // Column configuration
+        "columnDefs": [
+            { "orderable": false, "targets": [0, 7] }, // Disable sorting on '#' and 'Actions' columns
+            { "searchable": false, "targets": [0, 7] }, // Disable search on '#' and 'Actions' columns
+            { "width": "5%", "targets": 0 }, // # column
+            { "width": "20%", "targets": 1 }, // Name column
+            { "width": "25%", "targets": 2 }, // Description column
+            { "width": "10%", "targets": [3, 4, 5] }, // Count columns
+            { "width": "15%", "targets": 6 }, // Status column
+            { "width": "15%", "targets": 7 }  // Actions column
+        ],
+        
+        // Language customization
+        "language": {
+            "search": "Search studies:",
+            "lengthMenu": "Show _MENU_ entries per page",
+            "info": "Showing _START_ to _END_ of _TOTAL_ studies",
+            "infoEmpty": "No studies available",
+            "infoFiltered": "(filtered from _MAX_ total studies)",
+            "paginate": {
+                "first": "First",
+                "last": "Last",
+                "next": "Next",
+                "previous": "Previous"
+            },
+            "emptyTable": "No studies found",
+            "zeroRecords": "No matching studies found"
+        },
+        
+        // Styling and layout
+        "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+               '<"row"<"col-sm-12"tr>>' +
+               '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        
+        // Additional options
+        "stateSave": true, // Remember user preferences
+        "autoWidth": false,
+        "processing": false
+    });
+});
+
 function setExportData(studyId, studyName) {
     document.getElementById('studyName').textContent = studyName;
     document.getElementById('confirmExport').href = `/annotation/export_study/` + studyId;
@@ -107,6 +177,6 @@ function closeModal() {
     }
 }
 
-</script>
 
+</script>
 {% endblock %}

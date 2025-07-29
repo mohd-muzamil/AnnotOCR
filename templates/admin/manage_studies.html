@@ -6,60 +6,29 @@
     <div class="mb-3">
         <a href="{{ url_for('admin.studies') }}" class="btn btn-secondary">Back to Studies</a>
     </div>
-    
-    <!-- Action Cards for Better Organization -->
-    <style>
-    .action-card {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    .action-card .card-body {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 15px;
-    }
-    .action-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-    .action-item .btn {
-        margin-right: 10px;
-        min-width: 40px;
-    }
-    .action-item span {
-        font-size: 0.9em;
-        line-height: 1.2;
-    }
-</style>
-<div class="row mb-4">
+
+    <div class="row mb-4">
         <div class="col-md-4 mb-3">
             <div class="card action-card">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">OCR Processing</h5>
                 </div>
                 <div class="card-body">
-                    <div class="action-item">
-                        <form method="POST">
-                            <button type="submit" name="action" value="trigger_ocr_unprocessed" 
-                                    class="btn btn-success btn-sm" 
-                                    title="Process images without OCR results">
-                                <i class="fas fa-bolt"></i>
-                            </button>
-                        </form>
+                    <div class="action-item d-flex align-items-center">
+                        <button type="button" id="triggerOcrUnprocessedBtn" 
+                                class="btn btn-link p-0 me-2"
+                                onclick="triggerOcrUnprocessed()" 
+                                title="Process OCR for images that haven't been analyzed yet">
+                            <i class="fas fa-eye text-success"></i>
+                        </button>
                         <span>OCR Unprocessed Images</span>
                     </div>
-                    <div class="action-item">
-                        <form action="{{ url_for('admin.manage_study', study_id=study.id) }}" method="POST">
-                            <input type="hidden" name="action" value="trigger_ocr_all_images">
-                            <button type="submit" class="btn btn-primary btn-sm" id="processAllImagesButton"
-                                    title="Process all images regardless of status">
-                                <i class="fas fa-sync"></i>
-                            </button>
-                        </form>
+                    <div class="action-item d-flex align-items-center">
+                        <button type="button" id="triggerOcrAllBtn" class="btn btn-link p-0 me-2"
+                                onclick="triggerOcrAll()" 
+                                title="Process OCR for all images in this study">
+                            <i class="fas fa-cogs text-primary"></i>
+                        </button>
                         <span>OCR All Images</span>
                     </div>
                 </div>
@@ -73,33 +42,41 @@
                     <h5 class="mb-0">Image Management</h5>
                 </div>
                 <div class="card-body">
-                    <div class="action-item">
-                        <form action="{{ url_for('admin.reload_images_for_study', study_id=study.id) }}" method="POST">
-                            <button type="submit" class="btn btn-warning btn-sm" 
+                    <div class="action-item d-flex align-items-center">
+                        <form action="{{ url_for('admin.reload_images_for_study', study_id=study.id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-link p-0 me-2" 
                                     onclick="return confirm('Are you sure you want to refresh the image list?');"
-                                    title="Reload images from the static directory for this study">
-                                <i class="fas fa-redo"></i>
+                                    title="Refresh the image list from the static directory">
+                                <i class="fas fa-sync-alt text-warning"></i>
                             </button>
                         </form>
                         <span>Refresh Image List</span>
                     </div>
-                    <div class="action-item">
+                    <div class="action-item d-flex align-items-center">
                         <a href="{{ url_for('admin.upload_images', study_id=study.id) }}" 
-                           class="btn btn-info btn-sm"
+                           class="btn btn-link p-0 me-2"
                            title="Upload additional images to this study">
-                            <i class="fas fa-upload"></i>
+                            <i class="fas fa-upload text-info"></i>
                         </a>
-                        <span>Add New Images</span>
+                        <span>Upload Images</span>
                     </div>
-                    <div class="action-item">
-                        <form action="{{ url_for('admin.sync_images_from_remote', study_id=study.id) }}" method="POST">
-                            <button type="submit" class="btn btn-primary btn-sm" 
+                    <div class="action-item d-flex align-items-center">
+                        <form action="{{ url_for('admin.sync_images_from_remote', study_id=study.id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-link p-0 me-2" 
                                     onclick="return confirm('Are you sure you want to sync images from the remote server?');"
-                                    title="Sync images from remote server for this study">
-                                <i class="fas fa-cloud-download-alt"></i>
+                                    title="Sync images from the remote server">
+                                <i class="fas fa-download text-primary"></i>
                             </button>
                         </form>
                         <span>Sync Images from Remote</span>
+                    </div>
+                    <div class="action-item d-flex align-items-center">
+                        <button type="button" class="btn btn-link p-0 me-2" data-bs-toggle="modal" data-bs-target="#splitStudyModal" title="Split study into smaller batches">
+                            <i class="fas fa-cut text-warning"></i>
+                        </button>
+                        <span>Split Study</span>
                     </div>
                 </div>
             </div>
@@ -112,12 +89,13 @@
                     <h5 class="mb-0">Study Management</h5>
                 </div>
                 <div class="card-body">
-                    <div class="action-item">
-                        <form action="{{ url_for('admin.delete_study', study_id=study.id) }}" method="POST">
-                            <button type="submit" class="btn btn-danger btn-sm" 
+                    <div class="action-item d-flex align-items-center">
+                        <form action="{{ url_for('admin.delete_study', study_id=study.id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="btn btn-link p-0 me-2" 
                                     onclick="return confirm('Are you sure you want to remove this study?');"
                                     title="Delete this study and all associated data">
-                                <i class="fas fa-trash"></i>
+                                <i class="fas fa-trash text-danger"></i>
                             </button>
                         </form>
                         <span>Remove Study</span>
@@ -133,138 +111,208 @@
             <h5 class="mb-0">Study Images</h5>
         </div>
         <div class="card-body">
-            <form method="POST">
+            <form method="GET" action="{{ url_for('admin.manage_study', study_id=study.id) }}" class="mb-3">
+                <div class="input-group">
+                    <input type="text" name="image_search" class="form-control" placeholder="Search by filename..." value="{{ image_search_query or '' }}">
+                    <button class="btn btn-outline-secondary" type="submit">Search</button>
+                </div>
+            </form>
+
+            <form id="ocrActionsForm" method="POST" action="{{ url_for('admin.manage_study', study_id=study.id, page=images_pagination.page, image_search=image_search_query) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="mb-3 btn-group" role="group">
-                    <button type="submit" name="action" value="trigger_ocr_selected" 
-                            class="btn btn-primary">
-                        <i class="fas fa-bolt"></i> OCR Selected
+                    <button type="button" class="btn btn-primary" id="triggerOcrSelectedBtn">
+                        <i class="fas fa-cogs"></i> Trigger OCR for Selected
                     </button>
-                    <button type="submit" name="action" value="delete" 
+                    <button type="submit" name="action" value="delete"
                             class="btn btn-danger" 
-                            onclick="return confirm('Delete selected images?');">
+                            onclick="return confirm('Are you sure you want to delete the selected images?');">
                         <i class="fas fa-trash"></i> Delete Selected
                     </button>
                 </div>
                 
-                <table class="table table-striped table-hover">
+                <table class="table table-bordered table-hover">
                     <thead>
                         <tr>
-                            <th><input type="checkbox" id="selectAll" onclick="toggleCheckboxes(this)"></th>
-                            <th>#</th>
+                            <th style="width: 1rem;"><input type="checkbox" id="selectAll" onclick="toggleCheckboxes(this)"></th>
+                            <th style="width: 3rem;">#</th>
                             <th>Filename</th>
-                            <th>OCR Status</th>
+                            <th style="width: 10rem;">OCR Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for image in images %}
+                        {% for image in images_pagination.items %}
                         <tr>
-                            <td><input type="checkbox" name="image_ids[]" value="{{ image.id }}"></td>
-                            <td>{{ loop.index }}</td>
+                            <td><input type="checkbox" name="image_ids" value="{{ image.id }}" class="image-checkbox"></td>
+                                                        <td>{{ (images_pagination.page - 1) * images_pagination.per_page + loop.index }}</td>
                             <td>{{ image.filename }}</td>
                             <td>
-                                <span class="badge badge-{{ 'success' if image.ocr_status == 'processed' else 'warning' }}" style="color: black;">
-                                    {{ image.ocr_status }}
-                                </span>
+                                {{ image.ocr_status }}
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center">No images found for this study.</td>
+                            <td colspan="4" class="text-center">No images found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </form>
+
+            <nav aria-label="Image navigation">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item {% if not images_pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.manage_study', study_id=study.id, page=images_pagination.prev_num, image_search=image_search_query) }}">Previous</a>
+                    </li>
+                    {% for page_num in images_pagination.iter_pages() %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == images_pagination.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.manage_study', study_id=study.id, page=page_num, image_search=image_search_query) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if not images_pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.manage_study', study_id=study.id, page=images_pagination.next_num, image_search=image_search_query) }}">Next</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
     
     <a href="{{ url_for('admin.studies') }}" class="btn btn-secondary mt-3">Back to Studies</a>
 </div>
 
+{% block extra_js %}
 <script>
-function toggleCheckboxes(source) {
-    checkboxes = document.getElementsByName('image_ids[]');
-    for(var i=0, n=checkboxes.length; i<n; i++) {
-        checkboxes[i].checked = source.checked;
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Toast Notification Handler ---
+    const toastEl = document.getElementById('ocrToast');
+    const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+    function showToast(message, type = 'info') {
+        const toastBody = toastEl.querySelector('.toast-body');
+        toastBody.textContent = message;
+        toastEl.className = 'toast align-items-center text-white border-0'; // Reset classes
+        toastEl.classList.add(`bg-${type}`);
+        toast.show();
     }
-}
 
-function showLoadingOverlay(studyName, actionType) {
-    const overlay = document.getElementById('loadingOverlay');
-    const message = document.getElementById('processingMessage');
-    message.textContent = `OCR processing started for study ${studyName || 'Unknown'}.`;
-    let shouldShowOverlay = false;
-    
-    if (actionType === 'trigger_ocr_unprocessed') {
-        // For 'Process Unprocessed', check if there are unprocessed images
-        document.querySelectorAll('.badge.badge-warning').forEach(badge => {
-            if (badge.textContent.trim().toLowerCase() === 'not processed') {
-                shouldShowOverlay = true;
+    // --- Checkbox 'Select All' Functionality ---
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const imageCheckboxes = document.querySelectorAll('.image-checkbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('click', function () {
+            imageCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+
+    // --- Asynchronous OCR Action Handler ---
+    const ocrForm = document.getElementById('ocrActionsForm');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    async function triggerOcrAction(action, imageIds = []) {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const processingMessage = document.getElementById('processingMessage');
+
+        let message = 'Processing OCR...';
+        if (action === 'trigger_ocr_selected') {
+            message = `Processing ${imageIds.length} selected images...`;
+        } else if (action === 'trigger_ocr_unprocessed') {
+            message = 'Processing all unprocessed images...';
+        } else if (action === 'trigger_ocr_all_images') {
+            message = 'Processing all images...';
+        }
+        processingMessage.textContent = message;
+        loadingOverlay.style.display = 'flex';
+
+        fetch('{{ url_for('admin.manage_study', study_id=study.id) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                action: action,
+                image_ids: imageIds
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                // If we get a non-JSON response, we can inspect it as text.
+                return response.text().then(text => {
+                    // Check if the response is an HTML page, which might indicate a redirect to login.
+                    if (text.trim().startsWith('<!DOCTYPE html>')) {
+                        throw new Error('Invalid server response. You may be logged out. Please refresh and log in again.');
+                    }
+                    throw new Error(`Server responded with status ${response.status}: ${text}`);
+                });
             }
+            return response.json();
+        })
+        .then(data => {
+            loadingOverlay.style.display = 'none';
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                showToast(data.message || 'An unknown error occurred.', 'danger');
+            }
+        })
+        .catch(error => {
+            loadingOverlay.style.display = 'none';
+            console.error('OCR Error:', error);
+            showToast('An error occurred: ' + error.message, 'danger');
         });
-    } else if (actionType === 'trigger_ocr_selected') {
-        // For 'OCR Selected', check if any images are selected
-        shouldShowOverlay = document.querySelectorAll('input[name="image_ids[]"]:checked').length > 0;
-    } else {
-        // For 'Process All Images', check if there are any images in the study
-        shouldShowOverlay = document.querySelectorAll('input[name="image_ids[]"]').length > 0;
     }
-    
-    if (shouldShowOverlay) {
-        overlay.style.display = 'flex';
-        // Do not set localStorage to prevent persistence across page loads
-        // Simulate OCR completion with a longer timeout since real-time detection isn't available
-        setTimeout(() => {
-            hideLoadingOverlayWithStats();
-        }, 30000); // Longer timeout to simulate processing completion
-    } else {
-        console.log(`Skipping overlay display for ${actionType}: No relevant images to process.`);
-    }
-}
 
-function hideLoadingOverlayWithStats() {
-    const overlay = document.getElementById('loadingOverlay');
-    const message = document.getElementById('processingMessage');
-    const studyName = '{{ study.name }}' || 'Unknown';
-    // Display end message with placeholder stats since real-time stats fetching isn't implemented
-    message.textContent = `OCR processing ended for study ${studyName}. Stats: Total and Successful counts unavailable (requires server-side integration).`;
-    setTimeout(() => {
-        overlay.style.display = 'none';
-    }, 3000); // Show end message for 3 seconds before hiding
-}
+    // --- Event Listeners for OCR Buttons ---
+    document.getElementById('triggerOcrSelectedBtn')?.addEventListener('click', function() {
+        const selectedIds = Array.from(imageCheckboxes)
+                                 .filter(cb => cb.checked)
+                                 .map(cb => cb.value);
+        if (selectedIds.length === 0) {
+            showToast('Please select images to process.', 'warning');
+            return;
+        }
+        triggerOcrAction('trigger_ocr_selected', selectedIds);
+    });
 
-// Check if OCR processing was active on page load, but only show overlay if recently triggered
-document.addEventListener('DOMContentLoaded', function() {
-    // Clear the processing active flag on page load to prevent stale state from showing overlay
-    localStorage.removeItem('ocrProcessingActive');
-    localStorage.removeItem('ocrStudyName');
-});
+    document.getElementById('triggerOcrUnprocessedBtn')?.addEventListener('click', function() {
+        triggerOcrAction('trigger_ocr_unprocessed');
+    });
 
-// Attach event listeners to OCR processing buttons to show loading overlay
-document.addEventListener('DOMContentLoaded', function() {
-    const unprocessedButton = document.querySelector('button[name="action"][value="trigger_ocr_unprocessed"]');
-    if (unprocessedButton) {
-        unprocessedButton.addEventListener('click', function(event) {
-            console.log("Process Unprocessed button clicked, showing loading overlay if applicable");
-            showLoadingOverlay('{{ study.name }}', 'trigger_ocr_unprocessed');
-        });
-    }
-    const selectedButton = document.querySelector('button[name="action"][value="trigger_ocr_selected"]');
-    if (selectedButton) {
-        selectedButton.addEventListener('click', function(event) {
-            console.log("OCR Selected button clicked, showing loading overlay if applicable");
-            showLoadingOverlay('{{ study.name }}', 'trigger_ocr_selected');
-        });
-    }
-    const allImagesButton = document.querySelector('#processAllImagesButton');
-    if (allImagesButton) {
-        allImagesButton.addEventListener('click', function(event) {
-            console.log("Process All Images button clicked, showing loading overlay");
-            showLoadingOverlay('{{ study.name }}', 'trigger_ocr_all');
-        });
-    }
+    document.getElementById('triggerOcrAllBtn')?.addEventListener('click', function() {
+        triggerOcrAction('trigger_ocr_all_images');
+    });
+
+    // Prevent default form submission for async buttons, but allow for sync buttons
+    ocrForm.addEventListener('submit', function(event) {
+        // The `submitter` property gives us the button that was clicked.
+        const submitter = event.submitter;
+        // If the clicked button is one of our async buttons, prevent the default form submission.
+        if (submitter && (submitter.id === 'triggerOcrSelectedBtn' || submitter.id === 'triggerOcrUnprocessedBtn' || submitter.id === 'triggerOcrAllBtn')) {
+            event.preventDefault();
+        }
+        // Otherwise, allow the form to submit (e.g., for the 'delete' button).
+    });
 });
 </script>
+{% endblock %}
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+  <div id="ocrToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">Notification</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+    </div>
+  </div>
+</div>
 
 <!-- Loading Overlay -->
 <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
@@ -273,4 +321,64 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
     <div id="processingMessage" class="text-light mt-2">Processing OCR...</div>
 </div>
+
+<!-- Split Study Modal -->
+<div class="modal fade" id="splitStudyModal" tabindex="-1" aria-labelledby="splitStudyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-white border shadow">
+      <div class="modal-header bg-light border-bottom">
+        <h5 class="modal-title text-dark" id="splitStudyModalLabel">Split Study: {{ study.name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body bg-white">
+        <!-- Split Study Section -->
+        <div class="mb-4">
+          <h6>Split Study into Batches</h6>
+          <p>Divide the study into smaller batches for individual RAs to work on.</p>
+          <form action="{{ url_for('admin.manage_study', study_id=study.id) }}" method="POST" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="action" value="split_study">
+            <div class="mb-3">
+              <label for="batch_size" class="form-label">Batch Size (participants per batch)</label>
+              <input type="number" class="form-control" id="batch_size" name="batch_size" placeholder="Enter batch size" required min="1">
+              <div class="form-text">This study has {{ study.participants|length }} participants. Enter how many participants per batch.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Split Study</button>
+          </form>
+        </div>
+        
+        <hr>
+        
+        <!-- Merge Batches Section -->
+        <div class="mb-4">
+          <h6>Merge Batch Studies Back</h6>
+          <p>Merge all completed batch studies back to the main study.</p>
+          <form action="{{ url_for('admin.manage_study', study_id=study.id) }}" method="POST" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="action" value="merge_batch_studies">
+            <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to merge all batch studies back to the main study?');">Merge Batches</button>
+          </form>
+        </div>
+        
+        <hr>
+        
+        <!-- Delete Empty Batches Section -->
+        <div class="mb-3">
+          <h6>Delete Empty Batch Studies</h6>
+          <p>Delete all empty batch studies after merging is complete.</p>
+          <form action="{{ url_for('admin.manage_study', study_id=study.id) }}" method="POST" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="action" value="delete_batch_studies">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete all empty batch studies? This cannot be undone.');">Delete Empty Batches</button>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-top">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
+

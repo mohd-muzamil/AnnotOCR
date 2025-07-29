@@ -8,7 +8,19 @@
 {% block content %}
 <div class="container-fluid">
   <h2>{{ study.name }}</h2>
-  <table class="table">
+
+  <div class="row mb-3">
+      <div class="col-md-6">
+          <form method="GET" action="{{ url_for('dashboard.study', study_name=study.name) }}">
+              <div class="input-group">
+                  <input type="text" name="search" class="form-control" placeholder="Search by participant name..." value="{{ search_query or '' }}">
+                  <button class="btn btn-outline-secondary" type="submit">Search</button>
+              </div>
+          </form>
+      </div>
+  </div>
+  
+  <table class="table table-bordered table-hover">
     <thead>
       <tr>
         <th>Participant ID</th>
@@ -18,7 +30,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for item in participants %}
+      {% for item in participants_data %}
       <tr>
         <td>
           <a href="{{ url_for('review.participant_review', study_name=study.name, participant_name=item.participant.name) }}">
@@ -35,14 +47,27 @@
         </td>
         <td>
           <div class="progress">
-            <div class="progress-bar {{ 'bg-success' if item.image_count > 0 and (((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) >= 100) else 'bg-warning' }}" role="progressbar" style="width: {{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) if item.image_count > 0 else 0 }}%" aria-valuenow="{{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) | round(0) if item.image_count > 0 else 0 }}" aria-valuemin="0" aria-valuemax="100">
-              {{ ((item.approved_count + (item.rejected_count if item.rejected_count is defined else 0)) / item.image_count * 100) | round(1) if item.image_count > 0 else 0 }}%
+            <div class="progress-bar {{ 'bg-success' if item.progress_percent >= 100 else 'bg-warning' }}" role="progressbar" style="width: {{ item.progress_percent|round(0) }}%;" aria-valuenow="{{ item.progress_percent|round(0) }}" aria-valuemin="0" aria-valuemax="100">
+              {{ item.progress_percent|round(1) }}%
             </div>
           </div>
         </td>
       </tr>
+      {% else %}
+      <tr>
+        <td colspan="4" class="text-center">No participants found.</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
+
+  <div class="d-flex justify-content-center">
+    {{ pagination.links }}
+  </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ super() }}
 {% endblock %}

@@ -45,7 +45,7 @@
                                  onclick="expandImage(this)">
                         </div>
                     </div>
-                    
+
                     <!-- Text Columns (60%) -->
                     <div class="col-md-8">
                         <div class="row h-100">
@@ -58,7 +58,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Corrected Text Column (50% of right side) -->
                             <div class="col-md-6 {% if image.status == 'approved' %}border-success{% elif image.status == 'rejected' %}border-danger{% else %}border-secondary{% endif %}">
                                 <div class="p-1 h-100 d-flex flex-column">
@@ -66,14 +66,13 @@
                                     <div style="position: relative; flex-grow: 1;">
                                         <textarea class="form-control mb-1 correction-textarea" 
                                                   placeholder="Enter correction..."
-                                                  style="min-height: 60vh; resize: none; width: 100%; height: 100%;">{{ image.corrected_text if image.corrected_text else image.ocr_text if image.ocr_text else '' }}</textarea>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary clear-btn" 
+                                                  style="min-height: 60vh; resize: none; width: 100%; height: 100%;">{{ image.corrected_text if image.corrected_text else image.ocr_text if image.ocr_text else '' }}</textarea><button type="button" class="btn btn-sm btn-outline-secondary clear-btn" 
                                                 style="position: absolute; top: 5px; right: 5px; padding: 2px 8px; font-size: 1.4em; line-height: 1;"
                                                 title="Clear text">
                                             <i class="fas fa-eraser"></i>
                                         </button>
                                     </div>
-                                              
+
                                     <!-- Status Buttons -->
                                     <div class="btn-group w-100 mb-2">
                                         <button type="button" 
@@ -133,74 +132,74 @@
         justify-content: center;
         border: 1px solid #dee2e6;
     }
-    
+
     .ocr-text {
         white-space: pre-wrap;
         font-family: monospace;
         font-size: 0.9rem;
         overflow-y: auto;
     }
-    
+
     .cursor-zoom {
         cursor: zoom-in;
         transition: transform 0.2s;
     }
-    
+
     .cursor-zoom:hover {
         transform: scale(1.02);
     }
-    
+
     .btn-outline-secondary[data-status="pending"] {
         color: #6c757d !important;
         border-color: #6c757d !important;
         background-color: transparent !important;
     }
-    
+
     .btn-outline-secondary[data-status="pending"]:hover {
         background-color: rgba(108, 117, 125, 0.1) !important;
         color: #6c757d !important;
     }
-    
+
     .btn-outline-secondary[data-status="pending"].active {
         background-color: #6c757d !important;
         color: white !important;
         border-color: #6c757d !important;
     }
-    
+
     .btn-outline-success[data-status="approved"] {
         color: #28a745 !important;
         border-color: #28a745 !important;
         background-color: transparent !important;
     }
-    
+
     .btn-outline-success[data-status="approved"]:hover {
         background-color: rgba(40, 167, 69, 0.1) !important;
         color: #28a745 !important;
     }
-    
+
     .btn-outline-success[data-status="approved"].active {
         background-color: #28a745 !important;
         color: white !important;
         border-color: #28a745 !important;
     }
-    
+
     .btn-outline-danger[data-status="rejected"] {
         color: #dc3545 !important;
         border-color: #dc3545 !important;
         background-color: transparent !important;
     }
-    
+
     .btn-outline-danger[data-status="rejected"]:hover {
         background-color: rgba(220, 53, 69, 0.1) !important;
         color: #dc3545 !important;
     }
-    
+
     .btn-outline-danger[data-status="rejected"].active {
         background-color: #dc3545 !important;
         color: white !important;
         border-color: #dc3545 !important;
     }
-    
+
     @media (max-width: 768px) {
         .image-container {
             height: 40vh;
@@ -220,22 +219,22 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Log jQuery status for debugging
     console.log("jQuery version:", typeof $ !== 'undefined' ? $.fn.jquery : "jQuery not loaded");
-    
+
     // Initialize modal once
     const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
     const expandedImg = document.getElementById('expandedImage');
-    
+
     // Custom Autocomplete for "Your Correction" textareas
     console.log("Initializing custom autocomplete with suggestions:", appSuggestions);
     document.querySelectorAll("textarea.form-control").forEach(function(textarea) {
         console.log("Applying autocomplete to textarea:", textarea);
-        
+
         // Create a wrapper div for positioning the suggestion list
         const wrapper = document.createElement('div');
         wrapper.style.position = 'relative';
         textarea.parentNode.insertBefore(wrapper, textarea);
         wrapper.appendChild(textarea);
-        
+
         // Create suggestion list element unique to this textarea
         const suggestionList = document.createElement('ul');
         suggestionList.className = 'suggestion-list-' + Math.random().toString(36).substr(2, 9); // Unique class for identification
@@ -252,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
         suggestionList.style.width = textarea.offsetWidth + 'px';
         suggestionList.style.bottom = '100%'; // Position above the textarea
         wrapper.appendChild(suggestionList);
-        
+
         // Function to update suggestions for this textarea
         function updateSuggestions(value) {
             suggestionList.innerHTML = '';
@@ -260,11 +259,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 suggestionList.style.display = 'none';
                 return;
             }
-            
+
             const matches = appSuggestions.filter(function(suggestion) {
                 return suggestion.toLowerCase().includes(value.toLowerCase());
             });
-            
+
             if (matches.length > 0) {
                 matches.forEach(function(match, index) {
                     const li = document.createElement('li');
@@ -278,8 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     li.addEventListener('mouseout', function() {
                         li.style.backgroundColor = index === 0 && !suggestionList.dataset.selectedIndex ? '#f0f0f0' : 'white';
-                    });
-                    li.addEventListener('click', function() {
+                    });li.addEventListener('click', function() {
                         // Get current text and cursor position
                         const cursorPosition = textarea.selectionStart;
                         const value = textarea.value;
@@ -304,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 suggestionList.style.display = 'none';
             }
         }
-        
+
         // Handle input for suggestions, focusing on current line or last few characters
         textarea.addEventListener('input', function() {
             const value = this.value;
@@ -315,7 +313,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const lastLine = textBeforeCursor.split('\n').pop();
             updateSuggestions(lastLine);
         });
-        
+
         // Handle keydown for navigation and selection
         textarea.addEventListener('keydown', function(e) {
             if (e.keyCode === 9) { // Tab key
@@ -348,13 +346,12 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (suggestionList.style.display !== 'none') {
                 const items = suggestionList.querySelectorAll('li');
                 if (items.length === 0) return;
-                
+
                 let selectedIndex = parseInt(suggestionList.dataset.selectedIndex || '0', 10);
-                
+
                 if (e.keyCode === 38) { // Up arrow
                     e.preventDefault();
-                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-                    suggestionList.dataset.selectedIndex = selectedIndex;
+                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;suggestionList.dataset.selectedIndex = selectedIndex;
                     items.forEach((item, index) => item.style.backgroundColor = index === selectedIndex ? '#f0f0f0' : 'white');
                 } else if (e.keyCode === 40) { // Down arrow
                     e.preventDefault();
@@ -366,12 +363,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
+
         // Auto-save functionality for textarea changes, only when clicking outside
         textarea.addEventListener('blur', function() {
             autoSaveTextarea(this);
         });
-        
+
         // Store initial values for change detection
         textarea.dataset.initialValue = textarea.value;
         const container = textarea.closest('.col-md-6');
@@ -379,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (initialStatusButton) {
             initialStatusButton.dataset.initialStatus = initialStatusButton.getAttribute('data-status');
         }
-        
+
         // Function to auto-save textarea content
         function autoSaveTextarea(textarea) {
             const container = textarea.closest('.col-md-6');
@@ -390,16 +387,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const status = activeButton.getAttribute('data-status');
             const initialValue = textarea.dataset.initialValue;
             const initialStatus = activeButton.dataset.initialStatus || status;
-            
+
             // Check if there are actual changes
             const hasTextChanged = textarea.value !== initialValue;
             const hasStatusChanged = status !== initialStatus;
-            
+
             if (!hasTextChanged && !hasStatusChanged) {
                 console.log("No changes detected for image ID:", imageId);
                 return; // Do not save or show toast if no changes
             }
-            
+
             const data = {
                 image_id: imageId,
                 ocr_result_id: ocrResultId,
@@ -408,7 +405,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             console.log("Auto-saving textarea content for image ID:", imageId);
-            
+
             fetch("{{ url_for('review.batch_submit') }}", {
                 method: 'POST',
                 headers: {
@@ -433,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Auto-save error:', error);
             });
         }
-        
+
         // Hide suggestions when clicking outside
         document.addEventListener('click', function(e) {
             if (!wrapper.contains(e.target)) {
@@ -441,21 +438,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Improved expandImage function
     function expandImage(img) {
         // Reset image first to handle same-image clicks
         expandedImg.src = '';
         expandedImg.src = img.src;
         expandedImg.alt = img.alt || 'Expanded document view';
-        
+
         // Calculate best display size when image loads
         expandedImg.onload = function() {
             const windowHeight = window.innerHeight * 0.9;
             const windowWidth = window.innerWidth * 0.95;
             const imgRatio = this.naturalWidth / this.naturalHeight;
             const windowRatio = windowWidth / windowHeight;
-            
+
             if (imgRatio > windowRatio) {
                 this.style.width = '95vw';
                 this.style.height = 'auto';
@@ -464,10 +461,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.style.width = 'auto';
             }
         };
-        
+
         imageModal.show();
     }
-    
+
     // Close modal when clicking outside the image
     document.getElementById('imageModal').addEventListener('click', function(event) {
         if (event.target === this || event.target.classList.contains('modal-body')) {
@@ -503,21 +500,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 b.classList.remove('active');
             });
             this.classList.add('active');
-            
+
             // Auto-save on status change
             const imageId = this.getAttribute('data-image-id');
             const ocrResultId = this.getAttribute('data-ocr-result-id');
             const container = this.closest('.col-md-6');
             const textarea = container.querySelector('textarea');
             const status = this.getAttribute('data-status');
-            
+
             // If corrected text is empty, populate with predefined text
             let correctedText = textarea.value;
             if (!correctedText.trim()) {
                 correctedText = "No correction provided.";
                 textarea.value = correctedText;
             }
-            
+
             const data = {
                 image_id: imageId,
                 ocr_result_id: ocrResultId,
@@ -559,8 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     toast.show();
                     // Refresh the page to ensure all updates are reflected
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 500); // Small delay to allow toast to show briefly
+                        window.location.reload();}, 500); // Small delay to allow toast to show briefly
                 } else {
                     alert('Error: ' + (data.error || 'Unknown error'));
                 }

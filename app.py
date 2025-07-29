@@ -17,6 +17,7 @@ from routes.review import review_bp
 from routes.study import study_bp
 from routes.dashboard import dashboard_bp
 from routes.auth import auth_bp
+from routes.api import api_bp
 from services.data_loader import load_images_from_static
 
 
@@ -63,6 +64,18 @@ def register_commands(app):
         from services.ocr_image_extractor import ocr_processor
         ocr_processor.process_images()
 
+    @app.cli.command("load-images")
+    @click.option("--study-name", default=None, help="Name of a specific study to load.")
+    def load_images_command(study_name):
+        """Load images from the static directory into the database."""
+        from services.data_loader import load_images_from_static
+        click.echo("Starting to load images...")
+        try:
+            load_images_from_static(study_name=study_name)
+            click.echo("Finished loading images.")
+        except Exception as e:
+            click.echo(f"An error occurred during image loading: {e}")
+
 
 def create_app():
     from dotenv import load_dotenv
@@ -103,7 +116,7 @@ def create_app():
         return context
 
     # Register blueprints
-    for bp in [admin_bp, review_bp, study_bp, auth_bp, dashboard_bp]:
+    for bp in [admin_bp, review_bp, study_bp, auth_bp, dashboard_bp, api_bp]:
         app.register_blueprint(bp)
         csrf.exempt(bp)  # Optional: remove this line to enforce CSRF
 
@@ -123,10 +136,7 @@ def create_app():
                 # Removed print statement for found tables
                 app.logger.info("Database already initialized with tables.")
 
-        try:
-            load_images_from_static()
-        except Exception as e:
-            app.logger.error(f"Error loading images from static: {str(e)}")
+
 
 
         # Admin setup from env

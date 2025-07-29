@@ -5,6 +5,9 @@ from extensions import db
 from services.ocr_cleaner import clean_ocr_text
 from services.text_validator import validate_corrected_text
 
+import logging
+logger = logging.getLogger(__name__)
+
 review_bp = Blueprint('review', __name__, url_prefix='/annotation/review')
 
 @review_bp.route('/study/<string:study_name>/participant/<string:participant_name>')
@@ -71,14 +74,23 @@ def participant_review(study_name, participant_name):
             'ocr_result_id': ocr_result_id
         })
     
+    approved_count = sum(1 for img in participant.images if img.status == 'approved')
+    rejected_count = sum(1 for img in participant.images if img.status == 'rejected')
+    pending_count = sum(1 for img in participant.images if img.status == 'pending')
+    image_count = len(participant.images)
+    
+    total_reviewed = approved_count + rejected_count
+    progress_percent = (total_reviewed / image_count * 100) if image_count > 0 else 0
+
     return render_template('review/batch.html',
         study=study,
         participant=participant,
         images=image_data,
-        approved_count=sum(1 for img in participant.images if img.status == 'approved'),
-        rejected_count=sum(1 for img in participant.images if img.status == 'rejected'),
-        pending_count=sum(1 for img in participant.images if img.status == 'pending'),
-        image_count=len(participant.images)
+        approved_count=approved_count,
+        rejected_count=rejected_count,
+        pending_count=pending_count,
+        image_count=image_count,
+        progress_percent=progress_percent
     )
 
 
@@ -106,9 +118,11 @@ def batch_submit():
         
         # Validate corrected text before saving
         corrected_text = data.get('corrected_text', '')
-        is_valid, error_message = validate_corrected_text(corrected_text)
-        if not is_valid:
-            return jsonify({'success': False, 'error': f'Invalid format: {error_message}'}), 400
+        status = data.get('status', image.status) # Use new status if provided, else existing
+        if not (not corrected_text.strip() and status in ['approved', 'pending']):
+            is_valid, error_message = validate_corrected_text(corrected_text)
+            if not is_valid:
+                return jsonify({'success': False, 'error': f'Invalid format: {error_message}'}), 400
         
         # Create new correction
         # Note: original_text and status might not be in the database schema yet.

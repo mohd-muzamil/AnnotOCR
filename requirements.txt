@@ -14,10 +14,9 @@ Werkzeug==2.0.3
 click==8.0.3
 psycopg2-binary==2.9.6
 SQLAlchemy==1.4.46
-psycopg2-binary==2.9.6
-SQLAlchemy==1.4.46
 alembic==1.7.5
 Flask-Migrate==3.1.0
 pandas==1.5.3
 numpy==1.23.5
 xlsxwriter==3.0.3
+flask-paginate==2024.4.12
